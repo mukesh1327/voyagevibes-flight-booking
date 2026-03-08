@@ -1,0 +1,13 @@
+FROM registry.redhat.io/ubi9/nginx-126:9.7
+
+# Copy the current Angular browser bundle from the image build context.
+COPY --chown=1001:0 dist/voyagevibes-corp/browser/. /opt/app-root/src/
+RUN if [ -f /opt/app-root/src/index.csr.html ]; then mv /opt/app-root/src/index.csr.html /opt/app-root/src/index.html; fi
+
+# Load logging and HTTPS server config at nginx http context.
+COPY --chown=1001:0 ./docker/nginx/01-logging.conf /opt/app-root/etc/nginx.d/01-logging.conf
+COPY --chown=1001:0 ./docker/nginx/02-corp-ui-https.conf /opt/app-root/etc/nginx.d/02-corp-ui-https.conf
+
+EXPOSE 8080 8443
+
+CMD ["nginx", "-g", "daemon off;"]

@@ -1,0 +1,65 @@
+.confirmation-main {
+  min-height: calc(100vh - 140px);
+  display: grid;
+  place-items: center;
+  padding: 24px 16px;
+  background: #f8fafc;
+}
+
+.confirmation-card {
+  width: 100%;
+  max-width: 760px;
+  text-align: center;
+  border: 1px solid #dbeafe;
+}
+
+.confirmation-icon {
+  font-size: 48px;
+  margin-bottom: 10px;
+}
+
+.confirmation-grid {
+  margin-top: 16px;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  text-align: left;
+}
+
+.confirmation-grid label {
+  display: block;
+  font-size: 12px;
+  color: #64748b;
+}
+
+.confirmation-grid p {
+  margin-top: 2px;
+  font-weight: 700;
+  color: #0f172a;
+  word-break: break-word;
+}
+
+.confirmation-trip-box {
+  margin-top: 16px;
+  text-align: left;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 12px;
+}
+
+.confirmation-actions {
+  margin-top: 18px;
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+}
+
+@media (max-width: 640px) {
+  .confirmation-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .confirmation-actions {
+    flex-direction: column;
+  }
+}

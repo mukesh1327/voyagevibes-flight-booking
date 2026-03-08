@@ -1,0 +1,182 @@
+/**
+ * Search Results Page Styles
+ */
+
+.search-results-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: #f9fafb;
+}
+
+.search-results-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ============ Sticky Search ============ */
+.sticky-search {
+  background: white;
+  padding: 20px 24px;
+  border-bottom: 1px solid #e5e7eb;
+  position: sticky;
+  top: 70px;
+  z-index: 50;
+}
+
+.search-form-wrapper {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* ============ Results Layout ============ */
+.results-layout {
+  max-width: 1200px;
+  margin: 0 auto;
+  width: 100%;
+  padding: 0 24px;
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 24px;
+  flex: 1;
+  padding-top: 24px;
+  padding-bottom: 24px;
+}
+
+/* ============ Filter Sidebar ============ */
+.filter-sidebar {
+  display: block;
+}
+
+/* ============ Results Main ============ */
+.results-main {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.results-header {
+  background: white;
+  padding: 20px;
+  border-radius: 12px;
+  border-bottom: 2px solid #0066cc;
+}
+
+.results-header h2 {
+  margin: 0 0 8px 0;
+  font-size: 24px;
+  color: #1f2937;
+}
+
+.results-subtitle {
+  margin: 0;
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.results-subtitle strong {
+  color: #0066cc;
+}
+
+/* ============ Error Container ============ */
+.error-container {
+  padding: 40px 20px;
+}
+
+.error-box {
+  background: #fee2e2;
+  border: 1px solid #fca5a5;
+  border-radius: 12px;
+  padding: 24px;
+  text-align: center;
+  color: #991b1b;
+}
+
+.error-box h3 {
+  margin: 0 0 12px 0;
+}
+
+.error-box p {
+  margin: 0 0 16px 0;
+}
+
+/* ============ Loading Container ============ */
+.loading-container {
+  background: white;
+  border-radius: 12px;
+  padding: 60px 20px;
+  text-align: center;
+}
+
+/* ============ Flights Grid ============ */
+.flights-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* ============ Load More ============ */
+.load-more-container {
+  display: flex;
+  justify-content: center;
+  padding: 40px 0;
+}
+
+/* ============ Responsive ============ */
+@media (max-width: 1024px) {
+  .results-layout {
+    grid-template-columns: 240px 1fr;
+    gap: 16px;
+  }
+
+  .sticky-search {
+    padding: 16px 16px;
+  }
+
+  .results-layout {
+    padding: 0 16px;
+  }
+}
+
+@media (max-width: 768px) {
+  .sticky-search {
+    display: none;
+  }
+
+  .results-layout {
+    grid-template-columns: 1fr;
+    padding: 16px;
+    gap: 20px;
+  }
+
+  .filter-sidebar {
+    order: 2;
+  }
+
+  .results-main {
+    order: 1;
+  }
+
+  .results-header h2 {
+    font-size: 20px;
+  }
+
+  .results-subtitle {
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 640px) {
+  .results-layout {
+    padding: 12px;
+  }
+
+  .results-header {
+    padding: 16px;
+  }
+
+  .results-header h2 {
+    font-size: 18px;
+  }
+}

@@ -1,0 +1,9 @@
+FROM registry.redhat.io/ubi9/nodejs-22:9.7
+
+COPY package.json .
+RUN npm install
+COPY index.js .
+COPY src ./src
+
+EXPOSE 8084 9094
+CMD ["npm", "run", "start"]

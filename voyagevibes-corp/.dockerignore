@@ -1,0 +1,7 @@
+postman
+bin
+obj
+.vscode
+.git
+.gitignore
+Containerfile

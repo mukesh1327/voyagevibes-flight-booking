@@ -1,0 +1,162 @@
+{
+  "info": {
+    "name": "booking-service APIs",
+    "_postman_id": "bookingservice-collection",
+    "description": "Collection aligned to README API plan for booking-service.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "GET /api/v1/health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/health"
+          }
+        },
+        {
+          "name": "GET /api/v1/health/ready",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/health/ready"
+          }
+        },
+        {
+          "name": "GET /api/v1/health/live",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/health/live"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Booking APIs",
+      "item": [
+        {
+          "name": "POST /api/v1/bookings/reserve",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{userId}}"
+              },
+              {
+                "key": "X-Actor-Type",
+                "value": "{{actorType}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"flightId\": \"{{flightId}}\",\n  \"seatCount\": 1\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/bookings/reserve"
+          }
+        },
+        {
+          "name": "POST /api/v1/bookings/{bookingId}/confirm",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{userId}}"
+              },
+              {
+                "key": "X-Actor-Type",
+                "value": "{{actorType}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/bookings/{{bookingId}}/confirm"
+          }
+        },
+        {
+          "name": "GET /api/v1/bookings/{bookingId}",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{userId}}"
+              },
+              {
+                "key": "X-Actor-Type",
+                "value": "{{actorType}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/bookings/{{bookingId}}"
+          }
+        },
+        {
+          "name": "GET /api/v1/bookings",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{userId}}"
+              },
+              {
+                "key": "X-Actor-Type",
+                "value": "{{actorType}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/bookings"
+          }
+        },
+        {
+          "name": "POST /api/v1/bookings/{bookingId}/cancel",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{userId}}"
+              },
+              {
+                "key": "X-Actor-Type",
+                "value": "{{actorType}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/bookings/{{bookingId}}/cancel"
+          }
+        },
+        {
+          "name": "POST /api/v1/bookings/{bookingId}/change",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{userId}}"
+              },
+              {
+                "key": "X-Actor-Type",
+                "value": "{{actorType}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"newFlightId\": \"FL-1002\",\n  \"newSeatCount\": 2\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/bookings/{{bookingId}}/change"
+          }
+        }
+      ]
+    }
+  ]
+}

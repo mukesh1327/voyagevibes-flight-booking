@@ -1,0 +1,97 @@
+services:
+
+# --------- Payment Service ----------
+
+# Payment service postgres DB
+  paymentservice_postgres:
+    image: registry.redhat.io/rhel9/postgresql-16:latest
+    container_name: paymentservice_postgres
+    restart: always
+    environment:
+      POSTGRESQL_DATABASE: postgres
+      POSTGRESQL_USER: postgres
+      POSTGRESQL_PASSWORD: RedHat#123
+    ports:
+      - "5434:5432"
+    volumes:
+      - paymentservice_postgres_data:/var/lib/pgsql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres -h localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - flight-booking-network
+
+# Payment service DB initialization
+
+  paymentservice_postgres_init:
+    image: registry.redhat.io/rhel9/postgresql-16:latest
+    container_name: paymentservice_postgres_init
+    restart: "no"
+    environment:
+      PGPASSWORD: "RedHat#123"
+    command: >
+      sh -ec "
+        until pg_isready -h paymentservice_postgres -U postgres -d postgres; do sleep 2; done;
+        psql -h paymentservice_postgres -U postgres -d postgres -v ON_ERROR_STOP=1 -f /init/init-payment-db.sql
+      "
+    depends_on:
+      paymentservice_postgres:
+        condition: service_healthy
+    volumes:
+      - ./db:/init:ro
+    networks:
+      - flight-booking-network
+
+# Payment Service API
+  payment-service:
+    build:
+      context: .
+      dockerfile: ./docker/Containerfile
+    container_name: payment-service
+    restart: always
+    environment:
+      PAYMENT_STORAGE_BACKEND: postgres
+      RAZORPAY_KEY_ID: ${RAZORPAY_KEY_ID:-}
+      RAZORPAY_KEY_SECRET: ${RAZORPAY_KEY_SECRET:-}
+      PAYMENT_DB_DSN: postgresql://payment_app_user:PaymentApp%40123%24@paymentservice_postgres:5432/payment_service_db
+      PAYMENT_DB_SCHEMA: payment
+      HTTP_PORT: 8085
+      HTTPS_PORT: 9095
+      SERVER_HOST: 0.0.0.0
+      PUBLIC_HOST: payment.voyagevibes.in
+      SERVER_SSL_ENABLED: "true"
+      SERVER_SSL_CERTIFICATE: /app/https-certs/payment.voyagevibes.in.crt.pem
+      SERVER_SSL_CERTIFICATE_PRIVATE_KEY: /app/https-certs/payment.voyagevibes.in.key.pem
+      KAFKA_ENABLED: "true"
+      KAFKA_REQUIRED: "false"
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      KAFKA_CONSUMER_GROUP_ID: payment-service
+      KAFKA_BOOKING_EVENTS_TOPIC: booking.events
+      KAFKA_PAYMENT_EVENTS_TOPIC: payment.events
+      KAFKA_ENSURE_TOPICS: "true"
+    ports:
+      - "8085:8085"
+      - "9095:9095"
+    volumes:
+      - ./https-certs:/app/https-certs:ro
+    depends_on:
+      paymentservice_postgres:
+        condition: service_healthy
+      paymentservice_postgres_init:
+        condition: service_completed_successfully
+    networks:
+      - flight-booking-network
+
+# -------  Network ---------
+
+networks:
+  flight-booking-network:
+    name: flight-booking-network
+    driver: bridge
+
+# ----------  Volumes --------------
+
+volumes:
+  paymentservice_postgres_data:

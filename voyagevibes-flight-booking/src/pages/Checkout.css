@@ -1,0 +1,94 @@
+.checkout-main {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 24px 16px 40px;
+}
+
+.checkout-layout {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 20px;
+}
+
+.checkout-heading {
+  margin-bottom: 12px;
+}
+
+.checkout-heading h1 {
+  font-size: 30px;
+}
+
+.checkout-form {
+  display: grid;
+  gap: 14px;
+}
+
+.checkout-card {
+  border: 1px solid #e2e8f0;
+}
+
+.passenger-list {
+  display: grid;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.passenger-item {
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 12px;
+}
+
+.passenger-item-header {
+  margin-bottom: 10px;
+}
+
+.passenger-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.passenger-grid label {
+  font-size: 12px;
+  font-weight: 700;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.checkout-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.checkout-summary .sticky-summary {
+  position: sticky;
+  top: 90px;
+}
+
+.summary-total {
+  font-weight: 700;
+  color: #0f172a;
+  font-size: 18px;
+}
+
+@media (max-width: 1024px) {
+  .checkout-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .checkout-summary .sticky-summary {
+    position: static;
+  }
+}
+
+@media (max-width: 768px) {
+  .passenger-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .checkout-actions {
+    flex-direction: column;
+  }
+}

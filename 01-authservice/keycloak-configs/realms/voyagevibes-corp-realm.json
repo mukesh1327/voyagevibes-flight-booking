@@ -1,0 +1,204 @@
+{
+  "id": "voyagevibes-corp",
+  "realm": "voyagevibes-corp",
+  "displayName": "VoyageVibes Corporate Realm",
+  "enabled": true,
+  "sslRequired": "external",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": true,
+  "rememberMe": false,
+  "verifyEmail": true,
+  "accessTokenLifespan": 480,
+  "ssoSessionIdleTimeout": 900,
+  "ssoSessionMaxLifespan": 28800,
+  "offlineSessionIdleTimeout": 1209600,
+  "revokeRefreshToken": true,
+  "refreshTokenMaxReuse": 0,
+  "bruteForceProtected": true,
+  "permanentLockout": false,
+  "failureFactor": 5,
+  "quickLoginCheckMilliSeconds": 1000,
+  "minimumQuickLoginWaitSeconds": 60,
+  "maxFailureWaitSeconds": 1800,
+  "waitIncrementSeconds": 120,
+  "otpPolicyType": "totp",
+  "otpPolicyAlgorithm": "HmacSHA1",
+  "otpPolicyInitialCounter": 0,
+  "otpPolicyDigits": 6,
+  "otpPolicyLookAheadWindow": 1,
+  "otpPolicyPeriod": 30,
+  "eventsEnabled": true,
+  "eventsExpiration": 2592000,
+  "eventsListeners": [
+    "jboss-logging"
+  ],
+  "adminEventsEnabled": true,
+  "adminEventsDetailsEnabled": true,
+  "roles": {
+    "realm": [
+      {
+        "name": "CORP_ADMIN",
+        "description": "Corporate admin role"
+      },
+      {
+        "name": "OPS_AGENT",
+        "description": "Operations role"
+      },
+      {
+        "name": "SUPPORT_AGENT",
+        "description": "Support role"
+      },
+      {
+        "name": "FINANCE_AGENT",
+        "description": "Finance role"
+      },
+      {
+        "name": "CUSTOMER",
+        "description": "Shared customer role"
+      }
+    ]
+  },
+  "groups": [
+    {
+      "name": "ops",
+      "path": "/ops",
+      "realmRoles": [
+        "OPS_AGENT"
+      ]
+    },
+    {
+      "name": "support",
+      "path": "/support",
+      "realmRoles": [
+        "SUPPORT_AGENT"
+      ]
+    },
+    {
+      "name": "finance",
+      "path": "/finance",
+      "realmRoles": [
+        "FINANCE_AGENT"
+      ]
+    },
+    {
+      "name": "admin",
+      "path": "/admin",
+      "realmRoles": [
+        "CORP_ADMIN"
+      ]
+    }
+  ],
+  "clients": [
+    {
+      "clientId": "voyagevibes-corp-web",
+      "name": "VoyageVibes Corporate Web",
+      "description": "Corporate UI client",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "secret": "CorpWebSecret123$",
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "redirectUris": [
+        "https://corp-ui.voyagevibes.in:8086/corp/auth/callback",
+        "https://localhost:8080/corp/auth/callback",
+        "http://localhost:5173/corp/auth/callback",
+        "https://localhost:5173/corp/auth/callback"
+      ],
+      "webOrigins": [
+        "https://corp-ui.voyagevibes.in:8086",
+        "https://localhost:8080",
+        "http://localhost:5173",
+        "https://localhost:5173"
+      ],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "https://corp-ui.voyagevibes.in:8086/* https://localhost:8080/* http://localhost:5173/* https://localhost:5173/*"
+      },
+      "defaultClientScopes": [
+        "web-origins",
+        "profile",
+        "email",
+        "roles"
+      ],
+      "optionalClientScopes": [
+        "address",
+        "phone",
+        "offline_access",
+        "microprofile-jwt"
+      ],
+      "protocolMappers": [
+        {
+          "name": "user_id",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-property-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "id",
+            "claim.name": "user_id",
+            "jsonType.label": "String",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        },
+        {
+          "name": "realm",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-hardcoded-claim-mapper",
+          "consentRequired": false,
+          "config": {
+            "claim.name": "realm",
+            "claim.value": "voyagevibes-corp",
+            "jsonType.label": "String",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        },
+        {
+          "name": "roles",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "consentRequired": false,
+          "config": {
+            "claim.name": "roles",
+            "jsonType.label": "String",
+            "multivalued": "true",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        },
+        {
+          "name": "mfa_level",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-hardcoded-claim-mapper",
+          "consentRequired": false,
+          "config": {
+            "claim.name": "mfa_level",
+            "claim.value": "required",
+            "jsonType.label": "String",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
+      "clientId": "voyagevibes-auth-api",
+      "name": "VoyageVibes Auth API Service Account",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "secret": "",
+      "serviceAccountsEnabled": true,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false
+    }
+  ]
+}

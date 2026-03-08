@@ -1,0 +1,19 @@
+@bookingservice_HostAddress = http://localhost:8083
+@customerUserId = U-CUSTOMER-1
+
+GET {{bookingservice_HostAddress}}/api/v1/health
+Accept: application/json
+
+###
+
+POST {{bookingservice_HostAddress}}/api/v1/bookings/reserve
+X-User-Id: {{customerUserId}}
+X-Actor-Type: customer
+Content-Type: application/json
+
+{
+  "flightId": "FL-1001",
+  "seatCount": 1
+}
+
+###

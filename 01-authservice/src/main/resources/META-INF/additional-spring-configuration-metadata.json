@@ -1,0 +1,86 @@
+{
+  "groups": [
+    {
+      "name": "authservice",
+      "type": "com.cloudxplorer.authservice.infrastructure.config.AuthServiceProperties",
+      "sourceType": "com.cloudxplorer.authservice.infrastructure.config.AuthServiceProperties"
+    },
+    {
+      "name": "authservice.keycloak",
+      "type": "com.cloudxplorer.authservice.infrastructure.config.AuthServiceProperties$KeycloakProperties",
+      "sourceType": "com.cloudxplorer.authservice.infrastructure.config.AuthServiceProperties"
+    },
+    {
+      "name": "authservice.public-client",
+      "type": "com.cloudxplorer.authservice.infrastructure.config.AuthServiceProperties$PublicClientProperties",
+      "sourceType": "com.cloudxplorer.authservice.infrastructure.config.AuthServiceProperties"
+    },
+    {
+      "name": "authservice.corp-client",
+      "type": "com.cloudxplorer.authservice.infrastructure.config.AuthServiceProperties$CorpClientProperties",
+      "sourceType": "com.cloudxplorer.authservice.infrastructure.config.AuthServiceProperties"
+    }
+  ],
+  "properties": [
+    {
+      "name": "authservice.active-env",
+      "type": "java.lang.String",
+      "sourceType": "com.cloudxplorer.authservice.infrastructure.config.AuthServiceProperties"
+    },
+    {
+      "name": "authservice.prod-strict-config",
+      "type": "java.lang.Boolean",
+      "sourceType": "com.cloudxplorer.authservice.infrastructure.config.AuthServiceProperties"
+    },
+    {
+      "name": "authservice.keycloak.base-url",
+      "type": "java.lang.String",
+      "sourceType": "com.cloudxplorer.authservice.infrastructure.config.AuthServiceProperties$KeycloakProperties"
+    },
+    {
+      "name": "authservice.public-client.realm",
+      "type": "java.lang.String",
+      "sourceType": "com.cloudxplorer.authservice.infrastructure.config.AuthServiceProperties$PublicClientProperties"
+    },
+    {
+      "name": "authservice.public-client.client-id",
+      "type": "java.lang.String",
+      "sourceType": "com.cloudxplorer.authservice.infrastructure.config.AuthServiceProperties$PublicClientProperties"
+    },
+    {
+      "name": "authservice.public-client.client-secret",
+      "type": "java.lang.String",
+      "sourceType": "com.cloudxplorer.authservice.infrastructure.config.AuthServiceProperties$PublicClientProperties"
+    },
+    {
+      "name": "authservice.public-client.redirect-uri",
+      "type": "java.lang.String",
+      "sourceType": "com.cloudxplorer.authservice.infrastructure.config.AuthServiceProperties$PublicClientProperties"
+    },
+    {
+      "name": "authservice.public-client.google-idp-alias",
+      "type": "java.lang.String",
+      "sourceType": "com.cloudxplorer.authservice.infrastructure.config.AuthServiceProperties$PublicClientProperties"
+    },
+    {
+      "name": "authservice.corp-client.realm",
+      "type": "java.lang.String",
+      "sourceType": "com.cloudxplorer.authservice.infrastructure.config.AuthServiceProperties$CorpClientProperties"
+    },
+    {
+      "name": "authservice.corp-client.client-id",
+      "type": "java.lang.String",
+      "sourceType": "com.cloudxplorer.authservice.infrastructure.config.AuthServiceProperties$CorpClientProperties"
+    },
+    {
+      "name": "authservice.corp-client.client-secret",
+      "type": "java.lang.String",
+      "sourceType": "com.cloudxplorer.authservice.infrastructure.config.AuthServiceProperties$CorpClientProperties"
+    },
+    {
+      "name": "authservice.corp-client.redirect-uri",
+      "type": "java.lang.String",
+      "sourceType": "com.cloudxplorer.authservice.infrastructure.config.AuthServiceProperties$CorpClientProperties"
+    }
+  ]
+}

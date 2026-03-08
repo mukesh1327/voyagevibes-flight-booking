@@ -1,0 +1,59 @@
+spring:
+  application:
+    name: authservice
+  profiles:
+    default: prod
+  jackson:
+    serialization:
+      indent-output: true
+  datasource:
+    url: ${AUTH_DB_URL:jdbc:postgresql://localhost:5432/authdb}
+    username: ${AUTH_DB_USERNAME:authuser}
+    password: ${AUTH_DB_PASSWORD:Authservice@123}
+    driver-class-name: org.postgresql.Driver
+
+server:
+  port: ${AUTHSERVICE_HTTPS_PORT:9091}
+  address: ${AUTHSERVICE_BIND_ADDRESS:0.0.0.0}
+  ssl:
+    enabled: ${SERVER_SSL_ENABLED:true}
+    key-store: ${SERVER_SSL_KEY_STORE:file:./https-certs/authservice/auth.voyagevibes.in.p12}
+    key-store-password: ${SERVER_SSL_KEY_STORE_PASSWORD:changeit}
+    key-store-type: ${SERVER_SSL_KEY_STORE_TYPE:PKCS12}
+
+authservice:
+  active-env: ${APP_ENV:dev}
+  hostname: ${AUTHSERVICE_HOSTNAME:localhost}
+  app-base-url: ${AUTHSERVICE_APP_BASE_URL:https://${AUTHSERVICE_HOSTNAME:localhost}:${AUTHSERVICE_HTTPS_PORT:9091}}
+  keycloak:
+    base-url: ${KEYCLOAK_BASE_URL:http://localhost:8090}
+    public-base-url: ${KEYCLOAK_PUBLIC_BASE_URL:${KEYCLOAK_BASE_URL:http://localhost:8090}}
+  public-client:
+    realm: ${KEYCLOAK_PUBLIC_REALM:voyagevibes-public}
+    client-id: ${KEYCLOAK_CLIENT_ID_PUBLIC:voyagevibes-public-web}
+    client-secret: ${KEYCLOAK_CLIENT_SECRET_PUBLIC:}
+    redirect-uri: ${PUBLIC_REDIRECT_URI:https://customer-ui.voyagevibes.in:8080/auth/google/callback}
+    google-idp-alias: ${GOOGLE_IDP_ALIAS:google}
+  corp-client:
+    realm: ${KEYCLOAK_CORP_REALM:voyagevibes-corp}
+    client-id: ${KEYCLOAK_CLIENT_ID_CORP:voyagevibes-corp-web}
+    client-secret: ${KEYCLOAK_CLIENT_SECRET_CORP:}
+    redirect-uri: ${CORP_REDIRECT_URI:https://corp-ui.voyagevibes.in:8086/corp/auth/callback}
+
+---
+spring:
+  config:
+    activate:
+      on-profile: dev
+
+authservice:
+  prod-strict-config: false
+
+---
+spring:
+  config:
+    activate:
+      on-profile: prod
+
+authservice:
+  prod-strict-config: true

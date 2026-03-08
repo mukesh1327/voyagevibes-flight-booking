@@ -1,0 +1,18 @@
+services:
+  corp-ui:
+    build:
+      context: .
+      dockerfile: ./docker/Containerfile
+    container_name: corp-ui
+    restart: always
+    ports:
+      - "8086:8443"
+    volumes:
+      - ./https-certs:/etc/nginx/certs:ro
+    networks:
+      - flight-booking-network
+
+networks:
+  flight-booking-network:
+    external: true
+    name: flight-booking-network

@@ -1,0 +1,96 @@
+services:
+
+# --------- Customer Service ----------
+
+  customerservice_mongodb:
+    image: quay.io/mongodb/mongodb-community-server
+    container_name: customerservice_mongodb
+    ports:
+      - "27017:27017"
+    environment:
+      - MONGODB_INITDB_ROOT_USERNAME=admin
+      - MONGODB_INITDB_ROOT_PASSWORD=RedHat#123
+    volumes:
+      - customerservice_mongodb_data:/data/db
+    healthcheck:
+      test: ["CMD-SHELL", "mongosh --quiet --eval \"db.adminCommand({ ping: 1 })\""]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+    networks:
+      - flight-booking-network
+
+  customerservice_mongodb_init:
+    image: quay.io/mongodb/mongodb-community-server
+    container_name: customerservice_mongodb_init
+    restart: "no"
+    environment:
+      MONGO_INITDB_ROOT_PASSWORD: "RedHat#123"
+    command: >
+      sh -ec "
+        until mongosh --host customerservice_mongodb --username admin --password \"$$MONGO_INITDB_ROOT_PASSWORD\" --authenticationDatabase admin --quiet --eval \"db.adminCommand({ ping: 1 })\"; do sleep 2; done;
+        mongosh --host customerservice_mongodb --username admin --password \"$$MONGO_INITDB_ROOT_PASSWORD\" --authenticationDatabase admin /init/init-customer-db.js
+      "
+    depends_on:
+      customerservice_mongodb:
+        condition: service_healthy
+    volumes:
+      - ./db:/init:ro
+    networks:
+      - flight-booking-network
+
+# Customer Service API
+  customer-service:
+    build:
+      context: .
+      dockerfile: ./docker/Containerfile
+    container_name: customer-service
+    restart: always
+    environment:
+      HTTP_PORT: 8084
+      HTTPS_PORT: 9094
+      SERVER_HOST: 0.0.0.0
+      PUBLIC_HOST: customer.voyagevibes.in
+      AUTHSERVICE_BASE_URL: http://auth-service:8081
+      SERVER_SSL_ENABLED: "true"
+      SERVER_SSL_CERTIFICATE: /opt/app-root/src/https-certs/customer.voyagevibes.in.crt.pem
+      SERVER_SSL_CERTIFICATE_PRIVATE_KEY: /opt/app-root/src/https-certs/customer.voyagevibes.in.key.pem
+      MONGODB_ENABLED: "true"
+      MONGODB_REQUIRED: "true"
+      MONGODB_HOST: customerservice_mongodb
+      MONGODB_PORT: 27017
+      MONGODB_USER: admin
+      MONGODB_PASSWORD: RedHat#123
+      MONGODB_DATABASE: customerdb
+      KAFKA_ENABLED: "true"
+      KAFKA_REQUIRED: "false"
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      KAFKA_CONSUMER_GROUP_ID: customer-service
+      KAFKA_BOOKING_EVENTS_TOPIC: booking.events
+      KAFKA_PAYMENT_EVENTS_TOPIC: payment.events
+      KAFKA_INVENTORY_EVENTS_TOPIC: flight.inventory.events
+      KAFKA_NOTIFICATION_EVENTS_TOPIC: notification.events
+    ports:
+      - "8084:8084"
+      - "9094:9094"
+    volumes:
+      - ./https-certs:/opt/app-root/src/https-certs:ro
+    depends_on:
+      customerservice_mongodb_init:
+        condition: service_completed_successfully
+      customerservice_mongodb:
+        condition: service_healthy
+    networks:
+      - flight-booking-network
+
+# -------  Network ---------
+
+networks:
+  flight-booking-network:
+    name: flight-booking-network
+    driver: bridge
+
+# ----------  Volumes --------------
+
+volumes:
+  customerservice_mongodb_data:

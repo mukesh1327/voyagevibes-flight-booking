@@ -1,0 +1,184 @@
+services:
+# =============== Keycloak ===========================
+
+# Keycloak postgres
+
+  keycloak_postgres:
+    container_name: keycloak_postgres
+    image: registry.redhat.io/rhel9/postgresql-16:latest
+    restart: always
+    environment:
+      POSTGRESQL_DATABASE: ${KEYCLOAK_POSTGRES_DB:-keycloak}
+      POSTGRESQL_USER: ${KEYCLOAK_POSTGRES_USER:-keycloak}
+      POSTGRESQL_PASSWORD: ${KEYCLOAK_POSTGRES_PASSWORD:-Admin@123$}
+    ports: 
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U keycloak -d keycloak -h localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - keycloak_postgres_data:/var/lib/pgsql/data  # Volume keycloak_postgres_data
+    networks:
+      - flight-booking-network
+
+# ---------
+
+# Keycloak
+
+  keycloak:
+    container_name: keycloak
+    image: registry.redhat.io/rhbk/keycloak-rhel9:26.2-15
+    restart: always
+    ports:
+      - "${KEYCLOAK_HOST_HTTP_PORT:-8090}:8080"
+      - "${KEYCLOAK_HOST_HTTPS_PORT:-8091}:8443"
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN_USER:-admin}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-Admin@123$}
+      KC_HOSTNAME: ${KEYCLOAK_HOSTNAME:-keycloak.voyagevibes.in}
+      KC_DB_URL: jdbc:postgresql://keycloak_postgres:5432/keycloak
+      KC_HOSTNAME_STRICT: "${KEYCLOAK_HOSTNAME_STRICT:-true}"
+      KC_DB: ${KEYCLOAK_DB:-postgres}
+      KC_DB_USERNAME: ${KEYCLOAK_DB_USERNAME:-keycloak}
+      KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD:-Admin@123$}
+      KC_HTTP_ENABLED: "${KEYCLOAK_HTTP_ENABLED:-true}"
+      KC_PROXY_HEADERS: ${KEYCLOAK_PROXY_HEADERS:-xforwarded}
+      KC_HTTPS_KEY_STORE_FILE: /opt/keycloak/certs/keycloak.voyagevibes.in.p12
+      KC_HTTPS_KEY_STORE_PASSWORD: ${KEYCLOAK_HTTPS_KEY_STORE_PASSWORD:-changeit}
+      KC_HTTPS_KEY_STORE_TYPE: PKCS12
+      KC_HEALTH_ENABLED: "true"
+    command:
+      - start
+      - --import-realm
+    healthcheck:
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/localhost/8080"]
+      interval: 60s
+      timeout: 30s
+      retries: 5
+      start_period: 60s
+    depends_on:
+      keycloak_postgres:
+         condition: service_healthy
+    volumes:
+      - ./keycloak-configs/realms:/opt/keycloak/data/import:ro
+      - ./https-certs/keycloak:/opt/keycloak/certs:ro
+    networks:
+      - flight-booking-network
+  
+# ================= Auth Service ========================
+
+# Auth service postgres DB
+  authservice_postgres:
+    container_name: authservice_postgres
+    image: registry.redhat.io/rhel9/postgresql-16:latest
+    restart: always
+    environment:
+      POSTGRESQL_DATABASE: postgres
+      POSTGRESQL_USER: postgres
+      POSTGRESQL_PASSWORD: RedHat#123
+    ports: 
+      - "5432:5432"
+    volumes:
+      - authservice_postgres_data:/var/lib/pgsql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres -h localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - flight-booking-network
+
+# ----------
+
+# Auth service DB initialization
+  authservice_postgres_init:
+    image: registry.redhat.io/rhel9/postgresql-16:latest
+    container_name: authservice_postgres_init
+    restart: "no"
+    environment:
+      PGPASSWORD: "RedHat#123"
+    command: >
+      sh -ec "
+        until pg_isready -h authservice_postgres -U postgres -d postgres; do sleep 2; done;
+        psql -h authservice_postgres -U postgres -d postgres -v ON_ERROR_STOP=1 -f /init/init-auth-db.sql
+      "
+    depends_on:
+      authservice_postgres:
+        condition: service_healthy
+
+    volumes:
+      - ./db:/init:ro
+    networks:
+      - flight-booking-network
+
+# ----------
+
+# Auth service
+  auth-service:
+    build: 
+      context: .
+      dockerfile: ./docker/Containerfile
+    container_name: auth-service
+    restart: always
+    environment:
+
+      APP_ENV: prod
+
+      AUTHSERVICE_HTTP_PORT: ${AUTHSERVICE_HTTP_PORT:-8081}
+      AUTHSERVICE_HTTPS_PORT: ${AUTHSERVICE_HTTPS_PORT:-9091}
+      AUTHSERVICE_BIND_ADDRESS: ${AUTHSERVICE_BIND_ADDRESS:-0.0.0.0}
+      AUTHSERVICE_HOSTNAME: ${AUTHSERVICE_HOSTNAME:-auth.voyagevibes.in}
+      AUTHSERVICE_APP_BASE_URL: ${AUTHSERVICE_APP_BASE_URL:-https://auth.voyagevibes.in:9091}
+
+      AUTH_DB_URL: jdbc:postgresql://authservice_postgres:5432/authdb
+      AUTH_DB_USERNAME: authuser
+      AUTH_DB_PASSWORD: Authservice@123$
+
+      SERVER_SSL_ENABLED: "true"
+      SERVER_SSL_KEY_STORE: file:/etc/ssl/https-certs/auth.voyagevibes.in.p12
+      SERVER_SSL_KEY_STORE_PASSWORD: changeit
+      SERVER_SSL_KEY_STORE_TYPE: PKCS12
+
+      KEYCLOAK_BASE_URL: http://keycloak:8080
+      KEYCLOAK_PUBLIC_BASE_URL: https://keycloak.voyagevibes.in:8091
+      KEYCLOAK_PUBLIC_REALM: voyagevibes-public
+      KEYCLOAK_CLIENT_ID_PUBLIC: voyagevibes-public-web
+      KEYCLOAK_CLIENT_SECRET_PUBLIC: PublicApiSecret123$
+      PUBLIC_REDIRECT_URI: https://customer-ui.voyagevibes.in:8080/auth/google/callback
+      GOOGLE_IDP_ALIAS: google
+
+      KEYCLOAK_CORP_REALM: voyagevibes-corp
+      KEYCLOAK_CLIENT_ID_CORP: voyagevibes-corp-web
+      KEYCLOAK_CLIENT_SECRET_CORP: CorpWebSecret123$
+      CORP_REDIRECT_URI: https://corp-ui.voyagevibes.in:8086/corp/auth/callback
+
+    depends_on:
+      keycloak:
+        condition: service_healthy
+      authservice_postgres_init:
+        condition: service_completed_successfully
+      authservice_postgres:
+        condition: service_healthy
+
+    ports:
+      - "${AUTHSERVICE_HTTP_PORT:-8081}:8081"
+      - "${AUTHSERVICE_HTTPS_PORT:-9091}:9091"
+    volumes:
+      - ./https-certs/authservice:/etc/ssl/https-certs:ro
+    networks:
+      - flight-booking-network
+
+# ================= Network ========================
+
+networks:
+  flight-booking-network:
+    name: flight-booking-network
+    driver: bridge
+
+# ================= Volumes ========================
+
+volumes:
+  keycloak_postgres_data:
+  authservice_postgres_data:

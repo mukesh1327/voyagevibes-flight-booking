@@ -1,0 +1,141 @@
+{
+  "info": {
+    "name": "flight-service APIs",
+    "_postman_id": "flightservice-collection",
+    "description": "Collection aligned to README API plan for flight-service.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "GET /api/v1/health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/health"
+          }
+        },
+        {
+          "name": "GET /api/v1/health/ready",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/health/ready"
+          }
+        },
+        {
+          "name": "GET /api/v1/health/live",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/health/live"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Flight APIs",
+      "item": [
+        {
+          "name": "GET /api/v1/flights/search",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Actor-Type",
+                "value": "{{actorType}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/flights/search?from=DEL&to=BOM&date=2026-02-26"
+          }
+        },
+        {
+          "name": "GET /api/v1/flights/{flightId}",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/flights/{{flightId}}"
+          }
+        },
+        {
+          "name": "GET /api/v1/flights/{flightId}/availability",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/flights/{{flightId}}/availability"
+          }
+        },
+        {
+          "name": "POST /api/v1/pricing/quote",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"flightId\": \"{{flightId}}\",\n  \"seatCount\": 1\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/pricing/quote"
+          }
+        },
+        {
+          "name": "POST /api/v1/inventory/hold",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"flightId\": \"{{flightId}}\",\n  \"seatCount\": 1\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/inventory/hold"
+          }
+        },
+        {
+          "name": "POST /api/v1/inventory/release",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"holdId\": \"{{holdId}}\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/inventory/release"
+          }
+        },
+        {
+          "name": "POST /api/v1/inventory/commit",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"holdId\": \"{{holdId}}\",\n  \"bookingId\": \"{{bookingId}}\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/inventory/commit"
+          }
+        }
+      ]
+    }
+  ]
+}
