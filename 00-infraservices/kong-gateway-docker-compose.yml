@@ -65,7 +65,7 @@ services:
       kong_gateway:
         condition: service_started
     volumes:
-      - ./register-kong-routes.sh:/opt/bootstrap/register-kong-routes.sh:ro
+      - ./kong-files/register-kong-routes.sh:/opt/bootstrap/register-kong-routes.sh:ro
     networks:
       - flight-booking-network
 
