@@ -259,8 +259,8 @@ The list below reflects the variables currently consumed by application code or 
 | `MONGODB_MAX_POOL_SIZE` | Mongo max pool size |
 | `MONGODB_MIN_POOL_SIZE` | Mongo min pool size |
 | `MONGODB_DIRECT_CONNECTION` | Direct-connection toggle |
-| `MONGO_INITDB_ROOT_USERNAME` | Mongo root user fallback |
-| `MONGO_INITDB_ROOT_PASSWORD` | Mongo root password fallback |
+| `MONGODB_INITDB_ROOT_USERNAME` | Mongo root user fallback |
+| `MONGODB_INITDB_ROOT_PASSWORD` | Mongo root password fallback |
 | `KAFKA_ENABLED` | Enable Kafka integration |
 | `KAFKA_REQUIRED` | Fail startup if Kafka is unavailable |
 | `KAFKA_CLIENT_ID` | Kafka client id |

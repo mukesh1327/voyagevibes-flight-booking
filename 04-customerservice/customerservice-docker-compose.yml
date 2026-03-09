@@ -27,8 +27,8 @@ services:
       - ./.env
     command: >
       sh -ec "
-        until mongosh --host customerservice_mongodb --username \"$$MONGODB_INITDB_ROOT_USERNAME\" --password \"$$MONGO_INITDB_ROOT_PASSWORD\" --authenticationDatabase admin --quiet --eval \"db.adminCommand({ ping: 1 })\"; do sleep 2; done;
-        mongosh --host customerservice_mongodb --username \"$$MONGODB_INITDB_ROOT_USERNAME\" --password \"$$MONGO_INITDB_ROOT_PASSWORD\" --authenticationDatabase admin /init/init-customer-db.js
+        until mongosh --host customerservice_mongodb --username \"$$MONGODB_INITDB_ROOT_USERNAME\" --password \"$$MONGODB_INITDB_ROOT_PASSWORD\" --authenticationDatabase admin --quiet --eval \"db.adminCommand({ ping: 1 })\"; do sleep 2; done;
+        mongosh --host customerservice_mongodb --username \"$$MONGODB_INITDB_ROOT_USERNAME\" --password \"$$MONGODB_INITDB_ROOT_PASSWORD\" --authenticationDatabase admin /init/init-customer-db.js
       "
     depends_on:
       customerservice_mongodb:

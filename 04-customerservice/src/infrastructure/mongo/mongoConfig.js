@@ -62,8 +62,8 @@ function resolveMongoConfig(env) {
   const database = configuredDatabase || 'customerdb';
   const host = toText(config.MONGODB_HOST) || 'localhost';
   const port = parseIntOrDefault(config.MONGODB_PORT, 27017);
-  const username = toText(config.MONGODB_USER) || toText(config.MONGO_INITDB_ROOT_USERNAME) || 'admin';
-  const password = toText(config.MONGODB_PASSWORD) || toText(config.MONGO_INITDB_ROOT_PASSWORD) || 'RedHat#123';
+  const username = toText(config.MONGODB_USER) || toText(config.MONGODB_INITDB_ROOT_USERNAME) || 'admin';
+  const password = toText(config.MONGODB_PASSWORD) || toText(config.MONGODB_INITDB_ROOT_PASSWORD) || 'RedHat#123';
   const authSource = toText(config.MONGODB_AUTH_SOURCE) || (username ? 'admin' : null);
 
   const credentials = username && password
