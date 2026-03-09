@@ -5,6 +5,8 @@ services:
       dockerfile: ./docker/Containerfile
     container_name: customer-ui
     restart: always
+    env_file:
+      - ./.env
     ports:
       - "8080:8443"
     volumes:

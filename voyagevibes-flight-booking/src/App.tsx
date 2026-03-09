@@ -37,6 +37,24 @@ type RazorpayCheckoutOptions = {
     name?: string;
     email?: string;
     contact?: string;
+    method?: 'card' | 'netbanking' | 'wallet' | 'upi';
+  };
+  config?: {
+    display?: {
+      blocks?: Record<
+        string,
+        {
+          name: string;
+          instruments: Array<{
+            method: 'card' | 'netbanking' | 'wallet' | 'upi';
+          }>;
+        }
+      >;
+      sequence?: string[];
+      preferences?: {
+        show_default_blocks?: boolean;
+      };
+    };
   };
   notes?: Record<string, string>;
   theme?: {
@@ -85,6 +103,7 @@ const launchRazorpayCheckout = async (params: {
   amount: number;
   currency: string;
   bookingId: string;
+  paymentMethodType: PaymentMethod['type'];
   name?: string;
   email?: string;
   contact?: string;
@@ -102,6 +121,7 @@ const launchRazorpayCheckout = async (params: {
 
   return new Promise((resolve) => {
     let settled = false;
+    const razorpayMethod = mapCheckoutPaymentMethod(params.paymentMethodType);
     const settle = (value: RazorpayPaymentSuccess | null) => {
       if (!settled) {
         settled = true;
@@ -120,6 +140,25 @@ const launchRazorpayCheckout = async (params: {
         name: params.name,
         email: params.email,
         contact: params.contact,
+        method: razorpayMethod,
+      },
+      config: {
+        display: {
+          blocks: {
+            preferred_method: {
+              name: `Pay via ${getCheckoutMethodLabel(razorpayMethod)}`,
+              instruments: [
+                {
+                  method: razorpayMethod,
+                },
+              ],
+            },
+          },
+          sequence: ['block.preferred_method'],
+          preferences: {
+            show_default_blocks: false,
+          },
+        },
       },
       notes: {
         bookingId: params.bookingId,
@@ -145,6 +184,41 @@ const launchRazorpayCheckout = async (params: {
 
     checkout.open();
   });
+};
+
+const resolveCheckoutAmount = (flight: FlightWithPrice, passengerCount: number): number => {
+  const basePrice = Number(flight.pricing.totalPrice || 0);
+  const safePassengerCount = Math.max(passengerCount, 1);
+  return Math.max(basePrice * safePassengerCount, basePrice, 0);
+};
+
+const mapCheckoutPaymentMethod = (type: PaymentMethod['type']): 'card' | 'netbanking' | 'wallet' | 'upi' => {
+  switch (type) {
+    case 'credit-card':
+    case 'debit-card':
+      return 'card';
+    case 'net-banking':
+      return 'netbanking';
+    case 'wallet':
+      return 'wallet';
+    case 'upi':
+    default:
+      return 'upi';
+  }
+};
+
+const getCheckoutMethodLabel = (method: 'card' | 'netbanking' | 'wallet' | 'upi'): string => {
+  switch (method) {
+    case 'card':
+      return 'Card';
+    case 'netbanking':
+      return 'Netbanking';
+    case 'wallet':
+      return 'Wallet';
+    case 'upi':
+    default:
+      return 'UPI';
+  }
 };
 
 function App() {
@@ -289,6 +363,14 @@ function App() {
     setCheckoutError(null);
 
     try {
+      const checkoutAmount = resolveCheckoutAmount(selectedFlight, payload.passengers.length);
+      const checkoutCurrency = selectedFlight.pricing.currency || 'INR';
+
+      if (checkoutAmount <= 0) {
+        setCheckoutError('Calculated payment amount is invalid.');
+        return null;
+      }
+
       const reserved = await bookingService.reserve({
         flightIds: [selectedFlight.flight.id],
         passengers: payload.passengers,
@@ -303,8 +385,8 @@ function App() {
 
       const intent = await paymentService.createPaymentIntent({
         bookingId: reserved.data.id,
-        amount: reserved.data.pricing.totalPrice,
-        currency: reserved.data.pricing.currency,
+        amount: checkoutAmount,
+        currency: checkoutCurrency,
         paymentMethod: payload.paymentMethod,
       });
 
@@ -332,9 +414,10 @@ function App() {
         const razorpayResult = await launchRazorpayCheckout({
           keyId: intent.data.providerPublicKey,
           orderId: providerOrderId,
-          amount: reserved.data.pricing.totalPrice,
-          currency: reserved.data.pricing.currency,
+          amount: checkoutAmount,
+          currency: checkoutCurrency,
           bookingId: reserved.data.id,
+          paymentMethodType: payload.paymentMethod.type,
           name: `${effectiveUser?.firstName || ''} ${effectiveUser?.lastName || ''}`.trim(),
           email: payload.contactEmail,
           contact: payload.contactPhone,
@@ -354,7 +437,7 @@ function App() {
         paymentId: intent.data.id,
         providerPaymentId,
         providerOrderId,
-        amount: reserved.data.pricing.totalPrice,
+        amount: checkoutAmount,
         metadata:
           provider === 'razorpay'
             ? {
@@ -373,7 +456,7 @@ function App() {
         paymentId: authorized.data.id,
         providerPaymentId,
         providerOrderId,
-        amount: reserved.data.pricing.totalPrice,
+        amount: checkoutAmount,
         metadata: provider === 'razorpay' ? { source: 'checkout-ui' } : undefined,
       });
 

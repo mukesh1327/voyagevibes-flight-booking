@@ -6,8 +6,8 @@ services:
   flightservice_mysql:
     image: registry.redhat.io/rhel9/mysql-84:latest
     container_name: flightservice_mysql
-    environment:
-      MYSQL_ROOT_PASSWORD: RedHat#123
+    env_file:
+      - ./.env.mysql.db
     ports:
       - "3306:3306"
     healthcheck:
@@ -27,8 +27,8 @@ services:
     image: registry.redhat.io/rhel9/mysql-84:latest
     container_name: flightservice_mysql_init
     restart: "no"
-    environment:
-      MYSQL_PWD: "RedHat#123"
+    env_file:
+      - ./.env.mysql.init
     command: >
       sh -ec "
         until mysqladmin ping -h flightservice_mysql -u root --silent; do sleep 2; done;
@@ -51,24 +51,11 @@ services:
       dockerfile: src/main/docker/Dockerfile.jvm
     container_name: flight-service
     restart: always
+    env_file:
+      - ./.env
     ports:
       - "9092:9092"
       - "8082:8082"
-    environment:
-      HTTP_PORT: 8082
-      HTTPS_PORT: 9092
-      QUARKUS_HTTP_HOST: 0.0.0.0
-      QUARKUS_HTTP_INSECURE_REQUESTS: "enabled"
-      KAFKA_BOOTSTRAP_SERVERS: "kafka:9092"
-      FLIGHT_KAFKA_INVENTORY_TOPIC: "flight.inventory.events"
-      BOOKING_KAFKA_TOPIC: "flight-booking-topic"
-      SERVER_SSL_CERTIFICATE: "/etc/ssl/localcerts/flight.voyagevibes.in.crt.pem"
-      SERVER_SSL_CERTIFICATE_PRIVATE_KEY: "/etc/ssl/localcerts/flight.voyagevibes.in.key.pem"
-      BOOKING_EVENTS_CONSUMER_GROUP: "flight-service-group"
-      BOOKING_EVENTS_AUTO_OFFSET_RESET: "latest"
-      MYSQL_USER: root
-      MYSQL_PASSWORD: RedHat#123
-      MYSQL_JDBC_URL: jdbc:mysql://flightservice_mysql:3306/flight_booking
     depends_on:
       auth-service:
         condition: service_started

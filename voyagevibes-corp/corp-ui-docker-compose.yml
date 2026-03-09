@@ -5,6 +5,8 @@ services:
       dockerfile: ./docker/Containerfile
     container_name: corp-ui
     restart: always
+    env_file:
+      - ./.env
     ports:
       - "8086:8443"
     volumes:

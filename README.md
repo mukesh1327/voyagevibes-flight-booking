@@ -4,6 +4,8 @@ Polyglot flight-booking demo with Podman/Compose deployment units for gateway, a
 
 ## Start the application
 
+Compose-managed runtime variables now live in per-service dotenv files referenced by `env_file` instead of inline `environment` blocks. Compose units that contain multiple containers with overlapping variable names use separate `.env.*` files.
+
 ### In local containers
 
 ```shell

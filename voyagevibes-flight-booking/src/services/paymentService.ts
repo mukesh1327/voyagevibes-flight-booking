@@ -63,6 +63,21 @@ const mapBackendPayment = (payment: BackendPayment): PaymentIntent => ({
 
 const configuredProvider = (import.meta.env.VITE_PAYMENT_PROVIDER || '').toString().trim().toLowerCase();
 
+const normalizeProviderPaymentMethodType = (type: PaymentIntentRequest['paymentMethod']['type']): string => {
+  switch (type) {
+    case 'credit-card':
+    case 'debit-card':
+      return 'card';
+    case 'net-banking':
+      return 'netbanking';
+    case 'wallet':
+      return 'wallet';
+    case 'upi':
+    default:
+      return 'upi';
+  }
+};
+
 class PaymentService {
   async createPaymentIntent(request: PaymentIntentRequest): Promise<ApiResponse<PaymentIntent>> {
     const provider = request.provider || (configuredProvider === 'razorpay' ? 'razorpay' : 'mock');
@@ -75,6 +90,7 @@ class PaymentService {
         provider,
         metadata: {
           paymentMethodType: request.paymentMethod.type,
+          providerPaymentMethodType: normalizeProviderPaymentMethodType(request.paymentMethod.type),
           ...(request.metadata || {}),
         },
       },

@@ -6,10 +6,8 @@ services:
   bookingservice_mssql:
     image: mcr.microsoft.com/mssql/rhel/server:2025-latest  # Or 2022-latest for older
     container_name: bookingservice_mssql
-    environment:
-      ACCEPT_EULA: 'Y'
-      MSSQL_SA_PASSWORD: 'RedHat#123'  # Must meet complexity: 8+ chars, uppercase/lowercase/number/special
-      MSSQL_PID: 'Developer'  # Free for dev/test
+    env_file:
+      - ./.env
     ports:
       - "1433:1433"
     volumes:
@@ -27,9 +25,8 @@ services:
     image: mcr.microsoft.com/mssql/rhel/server:2025-latest
     container_name: bookingservice_mssql_init
     restart: "no"
-    environment:
-      ACCEPT_EULA: 'Y'
-      MSSQL_SA_PASSWORD: 'RedHat#123'
+    env_file:
+      - ./.env
     command: >
       /bin/sh -ec "
         until /opt/mssql-tools18/bin/sqlcmd -S bookingservice_mssql -U sa -P \"$$MSSQL_SA_PASSWORD\" -Q \"SELECT 1\" -C; do sleep 2; done;
@@ -50,17 +47,8 @@ services:
       dockerfile: ./docker/Containerfile
     container_name: booking-service
     restart: always
-    environment:
-      APP_ENV: prod
-      HTTP_PORT: 8083
-      HTTPS_PORT: 9093
-      SERVER_SSL_ENABLED: "true"
-      SERVER_SSL_CERTIFICATE: /app/https-certs/booking.voyagevibes.in.crt.pem
-      SERVER_SSL_CERTIFICATE_PRIVATE_KEY: /app/https-certs/booking.voyagevibes.in.key.pem
-      KAFKA__ENABLED: "true"
-      KAFKA__BOOTSTRAPSERVERS: kafka:9092
-      EXTERNALSERVICES__FLIGHT__BASEURL: http://flight-service:8082
-      EXTERNALSERVICES__FLIGHT__ALLOWINSECURETLS: "false"
+    env_file:
+      - ./.env
     ports:
       - "8083:8083"
       - "9093:9093"

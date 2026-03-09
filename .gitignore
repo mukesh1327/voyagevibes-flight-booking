@@ -20,3 +20,6 @@ target
 tmp/
 google-oauth.json
 rzp-key.csv
+
+.env.*
+.env
