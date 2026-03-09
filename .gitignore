@@ -17,9 +17,14 @@ target
 *.log
 *.tmp
 
+!voyagevibes-corp-realm.json.tmp
+!voyagevibes-public-realm.json.tmp
+
 tmp/
 google-oauth.json
 rzp-key.csv
 
 .env.*
 .env
+voyagevibes-corp-realm.json
+voyagevibes-public-realm.json

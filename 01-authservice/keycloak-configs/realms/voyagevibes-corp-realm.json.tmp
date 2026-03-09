@@ -1,28 +1,34 @@
 {
-  "id": "voyagevibes-public",
-  "realm": "voyagevibes-public",
-  "displayName": "VoyageVibes Public Realm",
+  "id": "voyagevibes-corp",
+  "realm": "voyagevibes-corp",
+  "displayName": "VoyageVibes Corporate Realm",
   "enabled": true,
   "sslRequired": "external",
-  "registrationAllowed": true,
+  "registrationAllowed": false,
   "loginWithEmailAllowed": true,
   "duplicateEmailsAllowed": false,
   "resetPasswordAllowed": true,
-  "rememberMe": true,
+  "rememberMe": false,
   "verifyEmail": true,
-  "accessTokenLifespan": 720,
-  "ssoSessionIdleTimeout": 1800,
-  "ssoSessionMaxLifespan": 36000,
-  "offlineSessionIdleTimeout": 2592000,
+  "accessTokenLifespan": 480,
+  "ssoSessionIdleTimeout": 900,
+  "ssoSessionMaxLifespan": 28800,
+  "offlineSessionIdleTimeout": 1209600,
   "revokeRefreshToken": true,
   "refreshTokenMaxReuse": 0,
   "bruteForceProtected": true,
   "permanentLockout": false,
-  "failureFactor": 30,
+  "failureFactor": 5,
   "quickLoginCheckMilliSeconds": 1000,
   "minimumQuickLoginWaitSeconds": 60,
-  "maxFailureWaitSeconds": 900,
-  "waitIncrementSeconds": 60,
+  "maxFailureWaitSeconds": 1800,
+  "waitIncrementSeconds": 120,
+  "otpPolicyType": "totp",
+  "otpPolicyAlgorithm": "HmacSHA1",
+  "otpPolicyInitialCounter": 0,
+  "otpPolicyDigits": 6,
+  "otpPolicyLookAheadWindow": 1,
+  "otpPolicyPeriod": 30,
   "eventsEnabled": true,
   "eventsExpiration": 2592000,
   "eventsListeners": [
@@ -33,37 +39,84 @@
   "roles": {
     "realm": [
       {
+        "name": "CORP_ADMIN",
+        "description": "Corporate admin role"
+      },
+      {
+        "name": "OPS_AGENT",
+        "description": "Operations role"
+      },
+      {
+        "name": "SUPPORT_AGENT",
+        "description": "Support role"
+      },
+      {
+        "name": "FINANCE_AGENT",
+        "description": "Finance role"
+      },
+      {
         "name": "CUSTOMER",
-        "description": "Public customer role"
+        "description": "Shared customer role"
       }
     ]
   },
+  "groups": [
+    {
+      "name": "ops",
+      "path": "/ops",
+      "realmRoles": [
+        "OPS_AGENT"
+      ]
+    },
+    {
+      "name": "support",
+      "path": "/support",
+      "realmRoles": [
+        "SUPPORT_AGENT"
+      ]
+    },
+    {
+      "name": "finance",
+      "path": "/finance",
+      "realmRoles": [
+        "FINANCE_AGENT"
+      ]
+    },
+    {
+      "name": "admin",
+      "path": "/admin",
+      "realmRoles": [
+        "CORP_ADMIN"
+      ]
+    }
+  ],
   "clients": [
     {
-      "clientId": "voyagevibes-public-web",
-      "name": "VoyageVibes Public Web",
-      "description": "Public web UI client (PKCE)",
+      "clientId": "voyagevibes-corp-web",
+      "name": "VoyageVibes Corporate Web",
+      "description": "Corporate UI client",
       "enabled": true,
       "protocol": "openid-connect",
-      "publicClient": true,
+      "publicClient": false,
+      "secret": "secret",
       "standardFlowEnabled": true,
       "directAccessGrantsEnabled": false,
       "serviceAccountsEnabled": false,
       "redirectUris": [
-        "https://customer-ui.voyagevibes.in:8080/auth/google/callback",
-        "https://localhost:8080/auth/google/callback",
-        "http://localhost:5173/auth/google/callback",
-        "https://localhost:5173/auth/google/callback"
+        "https://corp-ui.voyagevibes.in:8086/corp/auth/callback",
+        "https://localhost:8080/corp/auth/callback",
+        "http://localhost:5173/corp/auth/callback",
+        "https://localhost:5173/corp/auth/callback"
       ],
       "webOrigins": [
-        "https://customer-ui.voyagevibes.in:8080",
+        "https://corp-ui.voyagevibes.in:8086",
         "https://localhost:8080",
         "http://localhost:5173",
         "https://localhost:5173"
       ],
       "attributes": {
         "pkce.code.challenge.method": "S256",
-        "post.logout.redirect.uris": "https://customer-ui.voyagevibes.in:8080/* https://localhost:8080/* http://localhost:5173/* https://localhost:5173/*"
+        "post.logout.redirect.uris": "https://corp-ui.voyagevibes.in:8086/* https://localhost:8080/* http://localhost:5173/* https://localhost:5173/*"
       },
       "defaultClientScopes": [
         "web-origins",
@@ -99,7 +152,7 @@
           "consentRequired": false,
           "config": {
             "claim.name": "realm",
-            "claim.value": "voyagevibes-public",
+            "claim.value": "voyagevibes-corp",
             "jsonType.label": "String",
             "id.token.claim": "true",
             "access.token.claim": "true",
@@ -127,7 +180,7 @@
           "consentRequired": false,
           "config": {
             "claim.name": "mfa_level",
-            "claim.value": "optional",
+            "claim.value": "required",
             "jsonType.label": "String",
             "id.token.claim": "true",
             "access.token.claim": "true",
@@ -142,28 +195,10 @@
       "enabled": true,
       "protocol": "openid-connect",
       "publicClient": false,
-      "secret": "",
+      "secret": "CorpWebSecret123$",
       "serviceAccountsEnabled": true,
       "standardFlowEnabled": false,
       "directAccessGrantsEnabled": false
-    }
-  ],
-  "identityProviders": [
-    {
-      "alias": "google",
-      "displayName": "Google",
-      "providerId": "google",
-      "enabled": true,
-      "storeToken": true,
-      "addReadTokenRoleOnCreate": true,
-      "trustEmail": true,
-      "firstBrokerLoginFlowAlias": "first broker login",
-      "config": {
-        // "clientId": "",
-        // "clientSecret": "",
-        "defaultScope": "openid profile email https://www.googleapis.com/auth/user.phonenumbers.read",
-        "syncMode": "IMPORT"
-      }
     }
   ]
 }
