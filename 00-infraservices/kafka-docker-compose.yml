@@ -9,20 +9,6 @@ services:
       - "9193:9093"  # Controller port
     volumes:
       - kafka_data:/tmp/kraft-combined-logs  # Volume kafka_data
-    command: >
-      sh -c "
-        sed -ri 's|^listeners=.*|listeners=INTERNAL://:9092,CONTROLLER://:9093,EXTERNAL://:9192|' /opt/kafka/config/kraft/server.properties &&
-        sed -ri 's|^advertised.listeners=.*|advertised.listeners=INTERNAL://kafka:9092,EXTERNAL://localhost:9192|' /opt/kafka/config/kraft/server.properties &&
-        sed -ri 's|^inter.broker.listener.name=.*|inter.broker.listener.name=INTERNAL|' /opt/kafka/config/kraft/server.properties &&
-        sed -ri 's|^controller.listener.names=.*|controller.listener.names=CONTROLLER|' /opt/kafka/config/kraft/server.properties &&
-        sed -ri 's|^listener.security.protocol.map=.*|listener.security.protocol.map=CONTROLLER:PLAINTEXT,INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT|' /opt/kafka/config/kraft/server.properties &&
-        sed -ri 's|^process.roles=.*|process.roles=broker,controller|' /opt/kafka/config/kraft/server.properties &&
-        sed -ri 's|^node.id=.*|node.id=1|' /opt/kafka/config/kraft/server.properties &&
-        sed -ri 's|^controller.quorum.voters=.*|controller.quorum.voters=1@kafka:9093|' /opt/kafka/config/kraft/server.properties &&
-        sed -ri 's|^log.dirs=.*|log.dirs=/tmp/kraft-combined-logs|' /opt/kafka/config/kraft/server.properties &&
-        /opt/kafka/bin/kafka-storage.sh format --ignore-formatted -t MkU3OEVBNTcwNTJENDM2Qk -c /opt/kafka/config/kraft/server.properties &&
-        /opt/kafka/bin/kafka-server-start.sh /opt/kafka/config/kraft/server.properties
-      "
     networks:
       - flight-booking-network
 

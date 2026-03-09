@@ -55,6 +55,20 @@ services:
     networks:
       - flight-booking-network
 
+  kong-routes-init:
+    image: registry.redhat.io/openshift4/network-tools-rhel9:v4.19
+    restart: "no"
+    command: ["/bin/bash", "/opt/bootstrap/register-kong-routes.sh"]
+    environment:
+      KONG_ADMIN_BASE_URL: http://kong_gateway:8001
+    depends_on:
+      kong_gateway:
+        condition: service_started
+    volumes:
+      - ./register-kong-routes.sh:/opt/bootstrap/register-kong-routes.sh:ro
+    networks:
+      - flight-booking-network
+
 # ================= Network ========================
 
 networks:

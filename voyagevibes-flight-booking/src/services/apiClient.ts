@@ -30,32 +30,23 @@ const resolveEnv = (...keys: string[]): string | undefined => {
   return undefined;
 };
 
+const gatewayBaseUrl = resolveEnv('VITE_GATEWAY_API_URL', 'VITE_API_GATEWAY_BASE_URL') || '/gateway-api';
+
 const resolveServiceConfig = (): Record<
   ServiceKey,
   ServiceConfig
 > => ({
   gateway: {
-    baseUrl: resolveEnv('VITE_GATEWAY_API_URL', 'VITE_API_GATEWAY_BASE_URL') || '/gateway-api',
+    baseUrl: gatewayBaseUrl,
   },
-  auth: { baseUrl: resolveEnv('VITE_AUTH_API_URL') || '/auth-api' },
-  flight: { baseUrl: resolveEnv('VITE_FLIGHT_API_URL') || '/flight-api' },
-  booking: { baseUrl: resolveEnv('VITE_BOOKING_API_URL') || '/booking-api' },
-  customer: { baseUrl: resolveEnv('VITE_CUSTOMER_API_URL') || '/customer-api' },
-  payment: {
-    baseUrl:
-      resolveEnv('VITE_PAYMENT_API_URL', 'VITE_GATEWAY_API_URL', 'VITE_API_GATEWAY_BASE_URL') || '/gateway-api',
-  },
+  auth: { baseUrl: gatewayBaseUrl },
+  flight: { baseUrl: gatewayBaseUrl },
+  booking: { baseUrl: gatewayBaseUrl },
+  customer: { baseUrl: gatewayBaseUrl },
+  payment: { baseUrl: gatewayBaseUrl },
 });
 
 const serviceConfig = resolveServiceConfig();
-
-const fallbackServiceConfig: Partial<Record<ServiceKey, ServiceConfig>> = {
-  auth: { baseUrl: '/auth-api' },
-  flight: { baseUrl: '/flight-api' },
-  booking: { baseUrl: '/booking-api' },
-  customer: { baseUrl: '/customer-api' },
-  payment: { baseUrl: '/payment-api' },
-};
 
 const buildQueryString = (query?: RequestOptions['query']): string => {
   if (!query) {
@@ -127,7 +118,7 @@ export const apiRequest = async <T>(
   path: string,
   options: RequestOptions = {}
 ): Promise<ApiResponse<T>> => {
-  const { method = 'GET', body, headers, query, disableFallback = false } = options;
+  const { method = 'GET', body, headers, query } = options;
 
   const base = serviceConfig[service].baseUrl.replace(/\/+$/, '');
   const normalizedPath = path.startsWith('/') ? path : `/${path}`;
@@ -135,14 +126,7 @@ export const apiRequest = async <T>(
   const serializedBody = body === undefined ? undefined : JSON.stringify(body);
   const requestHeaders = buildHeaders(headers);
 
-  const primaryResponse = await executeRequest<T>(url, method, requestHeaders, serializedBody);
-  const fallback = fallbackServiceConfig[service];
-  if (disableFallback || !fallback || !shouldRetryWithFallback(primaryResponse)) {
-    return primaryResponse;
-  }
-
-  const fallbackBase = fallback.baseUrl.replace(/\/+$/, '');
-  return executeRequest<T>(`${fallbackBase}${normalizedPath}${buildQueryString(query)}`, method, requestHeaders, serializedBody);
+  return executeRequest<T>(url, method, requestHeaders, serializedBody);
 };
 
 const executeRequest = async <T>(
@@ -239,26 +223,6 @@ const extractErrorMessage = (payload: unknown, status: number): string => {
   }
 
   return `Request failed with status ${status}`;
-};
-
-const shouldRetryWithFallback = <T>(response: ApiResponse<T>): boolean => {
-  if (response.success) {
-    return false;
-  }
-
-  const status = response.error?.details?.status;
-  if (typeof status === 'number' && [404, 502, 503, 504].includes(status)) {
-    return true;
-  }
-
-  const message = response.error?.message || '';
-  return (
-    message === 'Expected JSON response from backend.' ||
-    message.includes('no Route matched') ||
-    message.includes('failure to get a peer from the ring-balancer') ||
-    message.includes('Network request failed') ||
-    message.includes('Failed to fetch')
-  );
 };
 
 export const toDate = (value: string | Date | undefined): Date => {

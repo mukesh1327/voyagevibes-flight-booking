@@ -13,19 +13,14 @@ interface RequestOptions {
   query?: Record<string, string | number | boolean | undefined | null>;
 }
 
-const baseUrls: Record<ServiceKey, string> = {
-  gateway: '/gateway-api',
-  auth: '/corp-auth-api',
-  flight: '/corp-flight-api',
-  booking: '/corp-booking-api',
-  payment: '/gateway-api',
-};
+const gatewayBaseUrl = '/gateway-api';
 
-const fallbackBaseUrls: Partial<Record<ServiceKey, string>> = {
-  auth: '/corp-auth-api',
-  flight: '/corp-flight-api',
-  booking: '/corp-booking-api',
-  payment: '/corp-payment-api',
+const baseUrls: Record<ServiceKey, string> = {
+  gateway: gatewayBaseUrl,
+  auth: gatewayBaseUrl,
+  flight: gatewayBaseUrl,
+  booking: gatewayBaseUrl,
+  payment: gatewayBaseUrl,
 };
 
 @Injectable({ providedIn: 'root' })
@@ -40,13 +35,7 @@ export class ApiClientService {
     const body = options.body === undefined ? undefined : JSON.stringify(options.body);
     const headers = this.buildHeaders(options.headers);
 
-    const primaryResult = await this.requestOnce<T>(url, method, headers, body);
-    const fallbackUrl = fallbackBaseUrls[service];
-    if (!fallbackUrl || !this.shouldRetryWithFallback(primaryResult)) {
-      return primaryResult;
-    }
-
-    return this.requestOnce<T>(`${fallbackUrl.replace(/\/+$/, '')}${normalizedPath}${query}`, method, headers, body);
+    return this.requestOnce<T>(url, method, headers, body);
   }
 
   private async requestOnce<T>(
@@ -219,20 +208,4 @@ export class ApiClientService {
     return undefined;
   }
 
-  private shouldRetryWithFallback<T>(result: ApiResult<T>): boolean {
-    if (result.success) {
-      return false;
-    }
-
-    if (result.status === 0 || result.status === 404 || result.status === 502 || result.status === 503 || result.status === 504) {
-      return true;
-    }
-
-    if (result.error?.code === 'UNEXPECTED_RESPONSE') {
-      return true;
-    }
-
-    const message = result.error?.message || '';
-    return message.includes('no Route matched') || message.includes('failure to get a peer from the ring-balancer');
-  }
 }

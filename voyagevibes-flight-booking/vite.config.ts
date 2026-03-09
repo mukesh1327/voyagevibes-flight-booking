@@ -33,36 +33,6 @@ export default defineConfig({
         },
         rewrite: (path) => path.replace(/^\/gateway-api/, ''),
       },
-      '/auth-api': {
-        target: process.env.VITE_AUTH_PROXY_TARGET || 'http://localhost:8081',
-        changeOrigin: true,
-        secure: false,
-        rewrite: (path) => path.replace(/^\/auth-api/, ''),
-      },
-      '/flight-api': {
-        target: process.env.VITE_FLIGHT_PROXY_TARGET || 'http://localhost:8082',
-        changeOrigin: true,
-        secure: false,
-        rewrite: (path) => path.replace(/^\/flight-api/, ''),
-      },
-      '/booking-api': {
-        target: process.env.VITE_BOOKING_PROXY_TARGET || 'http://localhost:8083',
-        changeOrigin: true,
-        secure: false,
-        rewrite: (path) => path.replace(/^\/booking-api/, ''),
-      },
-      '/customer-api': {
-        target: process.env.VITE_CUSTOMER_PROXY_TARGET || 'http://localhost:8084',
-        changeOrigin: true,
-        secure: false,
-        rewrite: (path) => path.replace(/^\/customer-api/, ''),
-      },
-      '/payment-api': {
-        target: process.env.VITE_PAYMENT_PROXY_TARGET || 'http://localhost:8085',
-        changeOrigin: true,
-        secure: false,
-        rewrite: (path) => path.replace(/^\/payment-api/, ''),
-      },
     },
   },
 });
