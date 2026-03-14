@@ -47,7 +47,7 @@ services:
       - ./.env
     ports:
       - "6380:6379"
-    command: ["redis-server", "--requirepass", "$$REDIS_PASSWORD"]
+    command: ["sh", "-c", "redis-server --requirepass \"$REDIS_PASSWORD\""]
     healthcheck:
       test: ["CMD-SHELL", "redis-cli -a $$REDIS_PASSWORD ping | grep PONG"]
       interval: 10s
@@ -66,13 +66,15 @@ services:
       - ./.env
     ports:
       - "8087:8087"
+    volumes:
+      - ./https-certs:/app/https-certs:ro
     depends_on:
       notificationservice_postgres:
         condition: service_healthy
       notificationservice_postgres_init:
         condition: service_completed_successfully
-      notificationservice_redis:
-        condition: service_healthy
+      # notificationservice_redis:
+      #   condition: service_healthy
     networks:
       - flight-booking-network
 

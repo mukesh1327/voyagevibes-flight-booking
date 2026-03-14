@@ -1,0 +1,6 @@
+*
+!docker/Containerfile
+!requirements.txt
+!main.py
+!app/
+!app/**

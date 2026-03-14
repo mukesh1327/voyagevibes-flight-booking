@@ -1,2 +1,4 @@
 *
-!target
+!docker/Containerfile
+!target/
+!target/*.jar

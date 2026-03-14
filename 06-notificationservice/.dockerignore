@@ -1,0 +1,4 @@
+*
+!docker/Containerfile
+!out/
+!out/notification-service

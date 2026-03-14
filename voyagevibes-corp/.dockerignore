@@ -1,7 +1,5 @@
-postman
-bin
-obj
-.vscode
-.git
-.gitignore
-Containerfile
+*
+!docker/
+!docker/**
+!dist/
+!dist/**
