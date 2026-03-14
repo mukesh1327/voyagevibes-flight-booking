@@ -86,9 +86,8 @@ podman pull registry.redhat.io/openshift4/network-tools-rhel9
 | `auth-service` | Spring Boot + PostgreSQL | `01-authservice/authservice-docker-compose.yml` | `8081` | `9091` | `0.0.0.0` | Keycloak-backed auth APIs |
 | `flight-service` | Quarkus + MySQL | `02-flightservice/flightservice-docker-compose.yml` | `8082` | `9092` | `0.0.0.0` | HTTP and HTTPS both enabled |
 | `booking-service` | .NET 8 + MSSQL | `03-bookingservice/bookingservice-docker-compose.yml` | `8083` | `9093` | `0.0.0.0` | Uses flight-service over HTTP |
-| `customer-service` | Node.js + MongoDB | `04-customerservice/customerservice-docker-compose.yml` | `8084` | `9094` | `0.0.0.0` | Profile + sync APIs |
+| `customer-service` | Node.js + MongoDB | `04-customerservice/customerservice-docker-compose.yml` | `8084` | `9094` | `0.0.0.0` | Notification + profile APIs |
 | `payment-service` | FastAPI + PostgreSQL | `05-paymentservice/paymentservice-docker-compose.yml` | `8085` | `9095` | `0.0.0.0` | Postgres + Kafka wired in compose |
-| `notification-service` | Go + Redis + PostgreSQL | `06-notificationservice/notificationservice-docker-compose.yml` | `8087` | — | `0.0.0.0` | OTP + notification fan-out |
 
 ## Port Map
 
@@ -99,7 +98,6 @@ podman pull registry.redhat.io/openshift4/network-tools-rhel9
 | `booking-service` | `http://localhost:8083` | `https://localhost:9093` | `http://booking-service:8083` | `https://booking-service:9093` |
 | `customer-service` | `http://localhost:8084` | `https://localhost:9094` | `http://customer-service:8084` | `https://customer-service:9094` |
 | `payment-service` | `http://localhost:8085` | `https://localhost:9095` | `http://payment-service:8085` | `https://payment-service:9095` |
-| `notification-service` | `http://localhost:8087` | — | `http://notification-service:8087` | — |
 
 ## Kong Gateway
 
@@ -527,6 +525,12 @@ curl -i -X POST http://localhost:8001/services/payment-service/routes --data "na
 | `PATCH` | `/api/v1/users/me` |
 | `POST` | `/api/v1/users/me/mobile/verify/request` |
 | `POST` | `/api/v1/users/me/mobile/verify/confirm` |
+| `POST` | `/api/v1/notifications/email` |
+| `POST` | `/api/v1/notifications/sms` |
+| `POST` | `/api/v1/notifications/push` |
+| `POST` | `/api/v1/sync/booking-events` |
+| `POST` | `/api/v1/sync/payment-events` |
+| `POST` | `/api/v1/sync/inventory-events` |
 
 ### Payment Service
 
@@ -541,15 +545,6 @@ curl -i -X POST http://localhost:8001/services/payment-service/routes --data "na
 | `POST` | `/api/v1/payments/{paymentId}/refund` |
 | `POST` | `/api/v1/payments/webhooks/provider` |
 
-### Notification Service
-
-| Method | Path |
-|---|---|
-| `GET` | `/api/v1/health` |
-| `GET` | `/api/v1/health/live` |
-| `GET` | `/api/v1/health/ready` |
-| `POST` | `/api/v1/otp/send` |
-
 ## Kong Admin Examples
 
 Register upstream services against the internal HTTP ports:
@@ -560,7 +555,6 @@ curl -i -X POST http://localhost:8001/services --data "name=flight-service" --da
 curl -i -X POST http://localhost:8001/services --data "name=booking-service" --data "url=http://booking-service:8083"
 curl -i -X POST http://localhost:8001/services --data "name=customer-service" --data "url=http://customer-service:8084"
 curl -i -X POST http://localhost:8001/services --data "name=payment-service" --data "url=http://payment-service:8085"
-curl -i -X POST http://localhost:8001/services --data "name=notification-service" --data "url=http://notification-service:8087"
 ```
 
 Register customer-facing routes:
@@ -569,9 +563,8 @@ Register customer-facing routes:
 curl -i -X POST http://localhost:8001/services/auth-service/routes --data "name=customer-auth-api" --data "hosts[]=customer-api.voyagevibes.in" --data "paths[]=/api/v1/auth" --data "strip_path=false"
 curl -i -X POST http://localhost:8001/services/flight-service/routes --data "name=customer-flight-api" --data "hosts[]=customer-api.voyagevibes.in" --data "paths[]=/api/v1/flights" --data "paths[]=/api/v1/pricing" --data "paths[]=/api/v1/inventory" --data "strip_path=false"
 curl -i -X POST http://localhost:8001/services/booking-service/routes --data "name=customer-booking-api" --data "hosts[]=customer-api.voyagevibes.in" --data "paths[]=/api/v1/bookings" --data "strip_path=false"
-curl -i -X POST http://localhost:8001/services/customer-service/routes --data "name=customer-profile-api" --data "hosts[]=customer-api.voyagevibes.in" --data "paths[]=/api/v1/users" --data "strip_path=false"
+curl -i -X POST http://localhost:8001/services/customer-service/routes --data "name=customer-profile-api" --data "hosts[]=customer-api.voyagevibes.in" --data "paths[]=/api/v1/users" --data "paths[]=/api/v1/notifications" --data "strip_path=false"
 curl -i -X POST http://localhost:8001/services/payment-service/routes --data "name=customer-payment-api" --data "hosts[]=customer-api.voyagevibes.in" --data "paths[]=/api/v1/payments" --data "strip_path=false"
-curl -i -X POST http://localhost:8001/services/notification-service/routes --data "name=customer-notification-otp-api" --data "hosts[]=customer-api.voyagevibes.in" --data "paths[]=/api/v1/otp" --data "strip_path=false"
 ```
 
 Register corp-facing routes:
@@ -581,7 +574,6 @@ curl -i -X POST http://localhost:8001/services/auth-service/routes --data "name=
 curl -i -X POST http://localhost:8001/services/flight-service/routes --data "name=corp-flight-api" --data "hosts[]=corp-api.voyagevibes.in" --data "paths[]=/api/v1/flights" --data "paths[]=/api/v1/pricing" --data "paths[]=/api/v1/inventory" --data "strip_path=false"
 curl -i -X POST http://localhost:8001/services/booking-service/routes --data "name=corp-booking-api" --data "hosts[]=corp-api.voyagevibes.in" --data "paths[]=/api/v1/bookings" --data "strip_path=false"
 curl -i -X POST http://localhost:8001/services/payment-service/routes --data "name=corp-payment-api" --data "hosts[]=corp-api.voyagevibes.in" --data "paths[]=/api/v1/payments" --data "strip_path=false"
-curl -i -X POST http://localhost:8001/services/notification-service/routes --data "name=corp-notification-otp-api" --data "hosts[]=corp-api.voyagevibes.in" --data "paths[]=/api/v1/otp" --data "strip_path=false"
 ```
 
 Verify through Kong HTTPS:
