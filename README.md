@@ -73,7 +73,12 @@ podman pull docker.io/library/kong
 podman pull registry.redhat.io/rhbk/keycloak-rhel9:26.2-15
 ```
 
-Network tool
+**Messaging service**
+```
+podman pull docker.io/apache/kafka:3.8.0
+```
+
+**Network tool**
 ```
 podman pull registry.redhat.io/openshift4/network-tools-rhel9
 ```
