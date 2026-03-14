@@ -394,7 +394,11 @@ The list below reflects the variables currently consumed by application code or 
 
 | Variable | Purpose |
 |---|---|
+| `HTTP_HOST` | HTTP bind address |
 | `HTTP_PORT` | HTTP listener port |
+| `HTTPS_ENABLED` | Enable HTTPS listener |
+| `TLS_CERT_FILE` | TLS certificate file path |
+| `TLS_KEY_FILE` | TLS private key file path |
 | `KAFKA_ENABLED` | Enable Kafka integration |
 | `KAFKA_BOOTSTRAP_SERVERS` | Kafka bootstrap servers |
 | `KAFKA_CONSUMER_GROUP_ID` | Kafka consumer group |

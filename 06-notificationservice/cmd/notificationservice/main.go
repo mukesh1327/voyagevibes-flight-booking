@@ -41,18 +41,24 @@ func main() {
 
 	var auditStore app.AuditStore = app.NoopAuditStore{}
 	var pgPool *pgxpool.Pool
+	postgresAvailable := false
 	if cfg.PostgresEnabled {
 		pool, err := pgxpool.New(ctx, cfg.PostgresDSN)
 		if err != nil {
-			logger.Fatalf("failed to create postgres pool: %v", err)
+			logger.Printf("postgres unavailable, continuing without audit store: %v", err)
+		} else {
+			if err := postgresinfra.EnsureAuditTable(ctx, pool); err != nil {
+				logger.Printf("postgres unavailable, continuing without audit store: %v", err)
+				pool.Close()
+			} else {
+				pgPool = pool
+				postgresAvailable = true
+				auditStore = postgresinfra.NewAuditStore(pgPool)
+			}
 		}
-		pgPool = pool
+	}
+	if pgPool != nil {
 		defer pgPool.Close()
-
-		if err := postgresinfra.EnsureAuditTable(ctx, pgPool); err != nil {
-			logger.Fatalf("failed to ensure audit table: %v", err)
-		}
-		auditStore = postgresinfra.NewAuditStore(pgPool)
 	}
 
 	publisher := kafkainfra.NewPublisher(cfg.KafkaBrokers, cfg.NotificationTopic)
@@ -98,19 +104,36 @@ func main() {
 		Health: transporthttp.HealthInfo{
 			Service:         "notification-service",
 			RedisConfigured: cfg.RedisAddr != "",
-			PostgresEnabled: cfg.PostgresEnabled,
+			PostgresEnabled: postgresAvailable,
 			KafkaEnabled:    cfg.KafkaEnabled,
 		},
 	})
 
+	addr := fmt.Sprintf(":%d", cfg.HttpPort)
+	if cfg.HttpHost != "" {
+		addr = fmt.Sprintf("%s:%d", cfg.HttpHost, cfg.HttpPort)
+	}
+
 	server := &http.Server{
-		Addr:    fmt.Sprintf(":%d", cfg.HttpPort),
+		Addr:    addr,
 		Handler: handler,
 	}
 
 	go func() {
-		logger.Printf("notification-service http listening on :%d", cfg.HttpPort)
-		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		scheme := "http"
+		if cfg.HttpsEnabled {
+			scheme = "https"
+		}
+		logger.Printf("notification-service %s listening on %s", scheme, addr)
+
+		var err error
+		if cfg.HttpsEnabled {
+			err = server.ListenAndServeTLS(cfg.TlsCertFile, cfg.TlsKeyFile)
+		} else {
+			err = server.ListenAndServe()
+		}
+
+		if err != nil && !errors.Is(err, http.ErrServerClosed) {
 			logger.Fatalf("http server error: %v", err)
 		}
 	}()

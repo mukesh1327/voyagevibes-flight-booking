@@ -28,3 +28,6 @@ rzp-key.csv
 .env
 voyagevibes-corp-realm.json
 voyagevibes-public-realm.json
+
+out
+go.sum
