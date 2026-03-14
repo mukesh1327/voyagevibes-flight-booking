@@ -55,6 +55,10 @@ CREATE TABLE IF NOT EXISTS payment.payments (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+CREATE UNIQUE INDEX IF NOT EXISTS payment_payments_provider_payment_id_uq
+    ON payment.payments(provider_payment_id)
+    WHERE provider_payment_id IS NOT NULL;
+
 ALTER TABLE payment.payments OWNER TO payment_owner;
 
 REVOKE ALL ON SCHEMA payment FROM PUBLIC;

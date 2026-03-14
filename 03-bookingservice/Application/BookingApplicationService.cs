@@ -1,3 +1,4 @@
+using System.Text.Json;
 using bookingservice.Domain;
 using bookingservice.Messaging;
 using Microsoft.Extensions.Options;
@@ -8,20 +9,18 @@ public class BookingApplicationService
 {
     private readonly IBookingRepository _repository;
     private readonly IFlightInventoryGateway _flightInventoryGateway;
-    private readonly IBookingEventPublisher _bookingEventPublisher;
     private readonly BookingKafkaMetrics _kafkaMetrics;
     private readonly BookingServiceOptions _serviceOptions;
+    private readonly JsonSerializerOptions _jsonOptions = new(JsonSerializerDefaults.Web);
 
     public BookingApplicationService(
         IBookingRepository repository,
         IFlightInventoryGateway flightInventoryGateway,
-        IBookingEventPublisher bookingEventPublisher,
         BookingKafkaMetrics kafkaMetrics,
         IOptions<BookingServiceOptions> serviceOptions)
     {
         _repository = repository;
         _flightInventoryGateway = flightInventoryGateway;
-        _bookingEventPublisher = bookingEventPublisher;
         _kafkaMetrics = kafkaMetrics;
         _serviceOptions = serviceOptions.Value;
     }
@@ -51,8 +50,7 @@ public class BookingApplicationService
             ActorType: actorType.HeaderValue(),
             UpdatedAt: DateTimeOffset.UtcNow);
 
-        _repository.Save(booking);
-        await PublishBookingEventAsync("BOOKING_RESERVED", booking, cancellationToken);
+        EnqueueBookingEvent("BOOKING_RESERVED", booking);
         return booking;
     }
 
@@ -78,8 +76,7 @@ public class BookingApplicationService
             UpdatedAt = DateTimeOffset.UtcNow
         };
 
-        _repository.Save(confirmed);
-        await PublishBookingEventAsync("BOOKING_CONFIRMED", confirmed, cancellationToken);
+        EnqueueBookingEvent("BOOKING_CONFIRMED", confirmed);
         return confirmed;
     }
 
@@ -127,8 +124,7 @@ public class BookingApplicationService
             UpdatedAt = DateTimeOffset.UtcNow
         };
 
-        _repository.Save(cancelled);
-        await PublishBookingEventAsync("BOOKING_CANCELLED", cancelled, cancellationToken);
+        EnqueueBookingEvent("BOOKING_CANCELLED", cancelled);
         return cancelled;
     }
 
@@ -178,8 +174,7 @@ public class BookingApplicationService
             UpdatedAt = DateTimeOffset.UtcNow
         };
 
-        _repository.Save(changed);
-        await PublishBookingEventAsync("BOOKING_CHANGED", changed, cancellationToken);
+        EnqueueBookingEvent("BOOKING_CHANGED", changed);
         return changed;
     }
 
@@ -244,16 +239,32 @@ public class BookingApplicationService
             _ => booking.PaymentStatus
         };
 
-        if (string.Equals(paymentStatus, booking.PaymentStatus, StringComparison.OrdinalIgnoreCase))
+        if (!string.Equals(paymentStatus, booking.PaymentStatus, StringComparison.OrdinalIgnoreCase))
         {
-            return Task.CompletedTask;
+            booking = _repository.Save(booking with
+            {
+                PaymentStatus = paymentStatus,
+                UpdatedAt = DateTimeOffset.UtcNow
+            });
         }
 
-        _repository.Save(booking with
+        if (eventType == "PAYMENT_CAPTURED" && IsPendingBookingStatus(booking.Status))
         {
-            PaymentStatus = paymentStatus,
-            UpdatedAt = DateTimeOffset.UtcNow
-        });
+            var actorType = ActorTypeExtensions.FromContext(booking.ActorType, null);
+            var correlationId = string.IsNullOrWhiteSpace(paymentEvent.EventId)
+                ? Guid.NewGuid().ToString("N")
+                : paymentEvent.EventId;
+            return ConfirmAsync(booking.BookingId, booking.UserId, actorType, correlationId, cancellationToken);
+        }
+
+        if (eventType == "PAYMENT_FAILED" && IsPendingBookingStatus(booking.Status))
+        {
+            var actorType = ActorTypeExtensions.FromContext(booking.ActorType, null);
+            var correlationId = string.IsNullOrWhiteSpace(paymentEvent.EventId)
+                ? Guid.NewGuid().ToString("N")
+                : paymentEvent.EventId;
+            return CancelAsync(booking.BookingId, booking.UserId, actorType, correlationId, cancellationToken);
+        }
 
         return Task.CompletedTask;
     }
@@ -267,7 +278,7 @@ public class BookingApplicationService
             {
                 mode,
                 service = "booking-service",
-                storage = "in-memory",
+                storage = _repository.StorageName,
                 activeEnv = _serviceOptions.ActiveEnv,
                 publishedBookingEvents = _kafkaMetrics.PublishedBookingEvents,
                 failedBookingPublishes = _kafkaMetrics.FailedBookingPublishes,
@@ -300,20 +311,30 @@ public class BookingApplicationService
         return booking;
     }
 
-    private async Task PublishBookingEventAsync(string eventType, Booking booking, CancellationToken cancellationToken)
+    private void EnqueueBookingEvent(string eventType, Booking booking)
     {
-        await _bookingEventPublisher.PublishAsync(
-            new BookingEvent(
-                EventId: Guid.NewGuid().ToString("N"),
-                EventType: eventType,
-                OccurredAt: DateTimeOffset.UtcNow.ToString("O"),
-                BookingId: booking.BookingId,
-                HoldId: booking.HoldId,
-                FlightId: booking.FlightId,
-                SeatCount: booking.SeatCount,
-                UserId: booking.UserId,
-                ActorType: booking.ActorType),
-            cancellationToken);
+        var now = DateTimeOffset.UtcNow;
+        var bookingEvent = new BookingEvent(
+            EventId: Guid.NewGuid().ToString("N"),
+            EventType: eventType,
+            OccurredAt: now.ToString("O"),
+            BookingId: booking.BookingId,
+            HoldId: booking.HoldId,
+            FlightId: booking.FlightId,
+            SeatCount: booking.SeatCount,
+            UserId: booking.UserId,
+            ActorType: booking.ActorType);
+
+        var payload = JsonSerializer.Serialize(bookingEvent, _jsonOptions);
+        var outboxEvent = new OutboxEvent(
+            EventId: bookingEvent.EventId,
+            EventType: bookingEvent.EventType,
+            BookingId: booking.BookingId,
+            Payload: payload,
+            CreatedAt: now,
+            PublishAttempts: 0);
+
+        _repository.SaveWithOutbox(booking, outboxEvent);
     }
 
     private static void ValidateReserve(ReserveBookingRequest request)
@@ -341,6 +362,12 @@ public class BookingApplicationService
         {
             throw new InvalidOperationException("cancelled booking cannot be modified");
         }
+    }
+
+    private static bool IsPendingBookingStatus(string status)
+    {
+        return string.Equals(status, "RESERVED", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(status, "CHANGED", StringComparison.OrdinalIgnoreCase);
     }
 
     private static string BuildBookingId() => $"BKG-{Guid.NewGuid():N}"[..16].ToUpperInvariant();

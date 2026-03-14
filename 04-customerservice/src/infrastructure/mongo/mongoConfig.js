@@ -40,6 +40,9 @@ function resolveMongoConfig(env) {
   const serverSelectionTimeoutMS = parseIntOrDefault(config.MONGODB_SERVER_SELECTION_TIMEOUT_MS, 5000);
   const maxPoolSize = parseIntOrDefault(config.MONGODB_MAX_POOL_SIZE, 10);
   const minPoolSize = parseIntOrDefault(config.MONGODB_MIN_POOL_SIZE, 0);
+  const writeConcern = toText(config.MONGODB_WRITE_CONCERN) || 'majority';
+  const writeTimeoutMS = parseIntOrDefault(config.MONGODB_WRITE_TIMEOUT_MS, 5000);
+  const journal = parseBoolean(config.MONGODB_JOURNAL, true);
 
   const directConnectionSetting = config.MONGODB_DIRECT_CONNECTION;
   const directConnection = parseBoolean(directConnectionSetting, true);
@@ -55,6 +58,9 @@ function resolveMongoConfig(env) {
       maxPoolSize,
       minPoolSize,
       serverSelectionTimeoutMS,
+      writeConcern,
+      writeTimeoutMS,
+      journal,
       hostSummary: 'MONGODB_URI'
     };
   }
@@ -90,6 +96,9 @@ function resolveMongoConfig(env) {
     maxPoolSize,
     minPoolSize,
     serverSelectionTimeoutMS,
+    writeConcern,
+    writeTimeoutMS,
+    journal,
     hostSummary: `${host}:${port}`
   };
 }
@@ -99,7 +108,12 @@ function createMongoClient(config) {
     appName: config.appName,
     maxPoolSize: config.maxPoolSize,
     minPoolSize: config.minPoolSize,
-    serverSelectionTimeoutMS: config.serverSelectionTimeoutMS
+    serverSelectionTimeoutMS: config.serverSelectionTimeoutMS,
+    writeConcern: {
+      w: config.writeConcern,
+      wtimeoutMS: config.writeTimeoutMS,
+      j: config.journal
+    }
   });
 }
 

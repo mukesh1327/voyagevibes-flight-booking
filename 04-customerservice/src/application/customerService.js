@@ -1,6 +1,5 @@
 const {
   normalizeExternalEvent,
-  notificationsForEvent,
   syncFieldForStream
 } = require('../domain/syncEvent');
 
@@ -78,32 +77,7 @@ class CustomerService {
   }
 
   async sendNotification(type, payload, actorType, metadata = {}) {
-    const normalizedType = String(type || '').trim().toLowerCase();
-    if (!['email', 'sms', 'push'].includes(normalizedType)) {
-      throw badRequest(`unsupported notification type: ${type}`);
-    }
-
-    const notification = {
-      notificationId: `NTF-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-      accepted: true,
-      type: normalizedType,
-      actorType,
-      userId: metadata.userId || payload.userId || null,
-      createdAt: new Date().toISOString(),
-      payload,
-      metadata
-    };
-
-    await this.notificationRepository.save(notification);
-    await this.publishNotificationEvent(notification, metadata);
-
-    return {
-      accepted: true,
-      type: normalizedType,
-      actorType,
-      notificationId: notification.notificationId,
-      payload
-    };
+    throw badRequest('notification endpoints have moved to notification-service');
   }
 
   async syncExternalEvent(stream, payload, fallbackActorType, correlationId) {
@@ -121,20 +95,6 @@ class CustomerService {
     }
 
     const updatedProfile = await this.applySyncSideEffects(event);
-    const notificationPlans = notificationsForEvent(event);
-    const notifications = [];
-
-    for (const plan of notificationPlans) {
-      const created = await this.sendNotification(plan.channel, plan.payload, event.actorType, {
-        source: event.source,
-        correlationId: correlationId || event.correlationId,
-        userId: event.userId,
-        stream: event.stream,
-        eventType: event.eventType,
-        eventId: event.eventId
-      });
-      notifications.push(created);
-    }
 
     return {
       accepted: true,
@@ -145,10 +105,6 @@ class CustomerService {
       userId: event.userId,
       actorType: event.actorType,
       syncedAt: new Date().toISOString(),
-      notifications: notifications.map((item) => ({
-        notificationId: item.notificationId,
-        type: item.type
-      })),
       profileSyncVersion: updatedProfile.syncVersion
     };
   }
@@ -156,8 +112,6 @@ class CustomerService {
   async health(mode) {
     const storage = this.userRepository.storageName || 'in-memory';
     const processedEvents = await this.eventLedgerRepository.count();
-    const notificationCount = await this.notificationRepository.count();
-
     return {
       status: 'UP',
       details: {
@@ -165,8 +119,7 @@ class CustomerService {
         service: 'customer-service',
         storage,
         sync: {
-          processedEvents,
-          notifications: notificationCount
+          processedEvents
         },
         kafka: {
           enabled: this.kafkaEnabled,
@@ -197,15 +150,8 @@ class CustomerService {
     this.kafkaMetrics.failedConsumed[key] += 1;
   }
 
-  async publishNotificationEvent(notification, metadata) {
-    try {
-      const publishResult = await this.notificationEventPublisher.publish(notification, metadata || {});
-      if (publishResult !== false) {
-        this.kafkaMetrics.publishedNotificationEvents += 1;
-      }
-    } catch (_error) {
-      this.kafkaMetrics.failedNotificationPublishes += 1;
-    }
+  async publishNotificationEvent() {
+    return false;
   }
 
   async applySyncSideEffects(event) {

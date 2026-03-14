@@ -21,6 +21,9 @@ include:
 # Payment service
   - ./05-paymentservice/paymentservice-docker-compose.yml
 
+# Notification service
+  - ./06-notificationservice/notificationservice-docker-compose.yml
+
 # Voyage Vibes Customer UI
   - ./voyagevibes-flight-booking/customer-ui-docker-compose.yml
 

@@ -88,6 +88,12 @@ class PaymentService:
         reason: Optional[str] = None,
         metadata: Optional[Dict] = None,
     ):
+        provider_payment_id = provider_payment_id.strip() if isinstance(provider_payment_id, str) else None
+        if provider_payment_id:
+            existing = self.repository.find_by_provider_payment_id(provider_payment_id)
+            if existing and existing.get("paymentId") != payment_id:
+                raise ValueError("provider payment id is already associated with another payment")
+
         payment = self.repository.find(payment_id)
         if payment is None:
             raise KeyError(f"payment not found: {payment_id}")
@@ -110,7 +116,7 @@ class PaymentService:
             payment["providerOrderId"] = provider_order_id.strip()
 
         if provider_payment_id:
-            payment["providerPaymentId"] = provider_payment_id.strip()
+            payment["providerPaymentId"] = provider_payment_id
 
         provider = (payment.get("provider") or "mock").strip().lower()
         if provider == "razorpay":
@@ -247,7 +253,8 @@ class PaymentService:
             "schemaVersion": "v1",
             "correlationId": correlation_id,
         }
-        self.event_publisher(event, payment["paymentId"])
+        key = payment.get("bookingId") or payment.get("paymentId")
+        self.event_publisher(event, key)
 
     def _create_razorpay_order(self, payment_id: str, booking_id: str, amount: float, currency: str, metadata: Dict):
         if self.razorpay_gateway is None:

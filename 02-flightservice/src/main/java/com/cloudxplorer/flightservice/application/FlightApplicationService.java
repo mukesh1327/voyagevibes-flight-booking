@@ -3,6 +3,8 @@ package com.cloudxplorer.flightservice.application;
 import com.cloudxplorer.flightservice.domain.ActorType;
 import com.cloudxplorer.flightservice.domain.Flight;
 import com.cloudxplorer.flightservice.domain.FlightRepository;
+import com.cloudxplorer.flightservice.domain.HoldRecord;
+import com.cloudxplorer.flightservice.domain.HoldStatus;
 import com.cloudxplorer.flightservice.messaging.BookingEvent;
 import com.cloudxplorer.flightservice.messaging.InventoryEvent;
 import com.cloudxplorer.flightservice.messaging.InventoryEventPublisher;
@@ -12,23 +14,23 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicLong;
 
 @ApplicationScoped
 public class FlightApplicationService {
 
   private static final Duration HOLD_TTL = Duration.ofMinutes(15);
+  private static final Duration SEARCH_CACHE_TTL = Duration.ofSeconds(30);
   private static final String DEFAULT_USER_ID = "U-DEFAULT";
 
   private final FlightRepository repository;
   private final InventoryEventPublisher inventoryEventPublisher;
   private final KafkaFlowMetrics kafkaFlowMetrics;
-  private final Map<String, HoldRecord> holdsById = new ConcurrentHashMap<>();
-  private final AtomicLong holdSequence = new AtomicLong(1000);
+  private final Map<String, SearchCacheEntry> searchCache = new ConcurrentHashMap<>();
 
   public FlightApplicationService(
       FlightRepository repository,
@@ -41,8 +43,12 @@ public class FlightApplicationService {
 
   public Map<String, Object> searchFlights(String from, String to, String date, ActorType actorType) {
     cleanupExpiredHolds();
-    List<Flight> flights =
-        repository.search(from, to, date);
+    String cacheKey = buildSearchCacheKey(from, to, date);
+    List<Flight> flights = getCachedSearch(cacheKey);
+    if (flights == null) {
+      flights = repository.search(from, to, date);
+      searchCache.put(cacheKey, new SearchCacheEntry(flights, Instant.now().plus(SEARCH_CACHE_TTL)));
+    }
 
     return Map.of(
         "actorType", actorType.headerValue(),
@@ -96,11 +102,27 @@ public class FlightApplicationService {
       throw new IllegalStateException("insufficient seats for flight: " + flight.flightId());
     }
 
-    String holdId = "HOLD-" + holdSequence.incrementAndGet();
+    String holdId = "HOLD-" + UUID.randomUUID().toString().replace("-", "").substring(0, 12).toUpperCase(Locale.ROOT);
     Instant expiresAt = Instant.now().plus(HOLD_TTL);
-    HoldRecord hold = new HoldRecord(holdId, flightId, seatCount, normalizeUserId(userId), actorType, expiresAt, HoldStatus.HELD);
-    holdsById.put(holdId, hold);
-    emitInventoryEvent("INVENTORY_HELD", hold, safe(asString(request.get("bookingId"))), "API_HOLD");
+    String bookingId = safe(asString(request.get("bookingId")));
+    HoldRecord hold = new HoldRecord(
+        holdId,
+        bookingId,
+        flightId,
+        seatCount,
+        normalizeUserId(userId),
+        actorType,
+        expiresAt,
+        HoldStatus.HELD);
+
+    try {
+      repository.createHold(hold);
+    } catch (Exception ex) {
+      releaseSeats(flightId, seatCount);
+      throw ex;
+    }
+
+    emitInventoryEvent("INVENTORY_HELD", hold, bookingId, "API_HOLD");
 
     return holdResponse(hold, request);
   }
@@ -109,14 +131,16 @@ public class FlightApplicationService {
     cleanupExpiredHolds();
     request = ensureRequest(request);
     HoldRecord hold = resolveAuthorizedHold(requiredText(request, "holdId"), actorType, userId);
+    HoldRecord current = hold;
 
     if (hold.status() == HoldStatus.HELD) {
       releaseSeats(hold.flightId(), hold.seatCount());
-      hold.setStatus(HoldStatus.RELEASED);
-      emitInventoryEvent("INVENTORY_RELEASED", hold, safe(asString(request.get("bookingId"))), "API_RELEASE");
+      repository.updateHoldStatus(hold.holdId(), HoldStatus.RELEASED);
+      current = withStatus(hold, HoldStatus.RELEASED);
+      emitInventoryEvent("INVENTORY_RELEASED", current, resolveBookingId(request, current), "API_RELEASE");
     }
 
-    return holdResponse(hold, request);
+    return holdResponse(current, request);
   }
 
   public synchronized Map<String, Object> commit(Map<String, Object> request, ActorType actorType, String userId) {
@@ -130,12 +154,13 @@ public class FlightApplicationService {
     if (hold.status() == HoldStatus.EXPIRED) {
       throw new IllegalStateException("hold already expired: " + hold.holdId());
     }
-    hold.setStatus(HoldStatus.COMMITTED);
+    repository.updateHoldStatus(hold.holdId(), HoldStatus.COMMITTED);
+    HoldRecord committed = withStatus(hold, HoldStatus.COMMITTED);
 
-    Map<String, Object> result = new LinkedHashMap<>(holdResponse(hold, request));
-    String bookingId = safe(asString(request.get("bookingId")));
+    Map<String, Object> result = new LinkedHashMap<>(holdResponse(committed, request));
+    String bookingId = resolveBookingId(request, committed);
     result.put("bookingId", bookingId);
-    emitInventoryEvent("INVENTORY_COMMITTED", hold, bookingId, "API_COMMIT");
+    emitInventoryEvent("INVENTORY_COMMITTED", committed, bookingId, "API_COMMIT");
     return result;
   }
 
@@ -183,7 +208,7 @@ public class FlightApplicationService {
 
   public Map<String, Object> health(String mode) {
     cleanupExpiredHolds();
-    long activeHolds = holdsById.values().stream().filter(h -> h.status() == HoldStatus.HELD).count();
+    long activeHolds = repository.countActiveHolds();
     Map<String, Object> details = new LinkedHashMap<>();
     details.put("mode", mode);
     details.put("service", "flight-service");
@@ -244,21 +269,16 @@ public class FlightApplicationService {
   }
 
   private synchronized void cleanupExpiredHolds() {
-    Instant now = Instant.now();
-    for (HoldRecord hold : holdsById.values()) {
-      if (hold.status() != HoldStatus.HELD) {
-        continue;
-      }
-      if (hold.expiresAt().isBefore(now)) {
-        releaseSeats(hold.flightId(), hold.seatCount());
-        hold.setStatus(HoldStatus.EXPIRED);
-        emitInventoryEvent("INVENTORY_EXPIRED", hold, "", "HOLD_EXPIRED");
-      }
+    for (HoldRecord hold : repository.findExpiredHolds(50)) {
+      releaseSeats(hold.flightId(), hold.seatCount());
+      repository.updateHoldStatus(hold.holdId(), HoldStatus.EXPIRED);
+      HoldRecord expired = withStatus(hold, HoldStatus.EXPIRED);
+      emitInventoryEvent("INVENTORY_EXPIRED", expired, safe(hold.bookingId()), "HOLD_EXPIRED");
     }
   }
 
   private HoldRecord resolveAuthorizedHold(String holdId, ActorType actorType, String userId) {
-    HoldRecord hold = holdsById.get(holdId);
+    HoldRecord hold = repository.findHoldById(holdId).orElse(null);
     if (hold == null) {
       throw new NoSuchElementException("hold not found: " + holdId);
     }
@@ -325,10 +345,30 @@ public class FlightApplicationService {
     response.put("userId", hold.userId());
     response.put("actorType", hold.actorType().headerValue());
     response.put("expiresAt", hold.expiresAt().toString());
-    if (request != null && request.containsKey("bookingId")) {
-      response.put("bookingId", String.valueOf(request.get("bookingId")));
+    String bookingId = resolveBookingId(request, hold);
+    if (!bookingId.isBlank()) {
+      response.put("bookingId", bookingId);
     }
     return response;
+  }
+
+  private String resolveBookingId(Map<String, Object> request, HoldRecord hold) {
+    if (request != null && request.containsKey("bookingId")) {
+      return String.valueOf(request.get("bookingId"));
+    }
+    return safe(hold.bookingId());
+  }
+
+  private HoldRecord withStatus(HoldRecord hold, HoldStatus status) {
+    return new HoldRecord(
+        hold.holdId(),
+        hold.bookingId(),
+        hold.flightId(),
+        hold.seatCount(),
+        hold.userId(),
+        hold.actorType(),
+        hold.expiresAt(),
+        status);
   }
 
   private Map<String, Object> pricingAndInventoryPolicies() {
@@ -338,69 +378,28 @@ public class FlightApplicationService {
         "corpDiscountPercent", 0);
   }
 
-  private enum HoldStatus {
-    HELD,
-    RELEASED,
-    COMMITTED,
-    EXPIRED
+  private List<Flight> getCachedSearch(String cacheKey) {
+    SearchCacheEntry entry = searchCache.get(cacheKey);
+    if (entry == null) {
+      return null;
+    }
+    if (entry.expiresAt().isBefore(Instant.now())) {
+      searchCache.remove(cacheKey);
+      return null;
+    }
+    return entry.flights();
   }
 
-  private static final class HoldRecord {
-    private final String holdId;
-    private final String flightId;
-    private final int seatCount;
-    private final String userId;
-    private final ActorType actorType;
-    private final Instant expiresAt;
-    private HoldStatus status;
-
-    private HoldRecord(
-        String holdId,
-        String flightId,
-        int seatCount,
-        String userId,
-        ActorType actorType,
-        Instant expiresAt,
-        HoldStatus status) {
-      this.holdId = holdId;
-      this.flightId = flightId;
-      this.seatCount = seatCount;
-      this.userId = userId;
-      this.actorType = actorType;
-      this.expiresAt = expiresAt;
-      this.status = status;
-    }
-
-    private String holdId() {
-      return holdId;
-    }
-
-    private String flightId() {
-      return flightId;
-    }
-
-    private int seatCount() {
-      return seatCount;
-    }
-
-    private String userId() {
-      return userId;
-    }
-
-    private ActorType actorType() {
-      return actorType;
-    }
-
-    private Instant expiresAt() {
-      return expiresAt;
-    }
-
-    private HoldStatus status() {
-      return status;
-    }
-
-    private void setStatus(HoldStatus status) {
-      this.status = status;
-    }
+  private String buildSearchCacheKey(String from, String to, String date) {
+    return normalizeKey(from) + "|" + normalizeKey(to) + "|" + normalizeKey(date);
   }
+
+  private String normalizeKey(String value) {
+    if (value == null || value.isBlank()) {
+      return "-";
+    }
+    return value.trim().toUpperCase(Locale.ROOT);
+  }
+
+  private record SearchCacheEntry(List<Flight> flights, Instant expiresAt) {}
 }

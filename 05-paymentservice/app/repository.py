@@ -16,10 +16,14 @@ class InMemoryPaymentRepository:
     def __init__(self):
         self._payments: Dict[str, dict] = {}
         self._payment_by_booking: Dict[str, str] = {}
+        self._payment_by_provider_payment_id: Dict[str, str] = {}
 
     def save(self, payment: dict) -> dict:
         self._payments[payment["paymentId"]] = payment
         self._payment_by_booking[payment["bookingId"]] = payment["paymentId"]
+        provider_payment_id = str(payment.get("providerPaymentId") or "").strip()
+        if provider_payment_id:
+            self._payment_by_provider_payment_id[provider_payment_id] = payment["paymentId"]
         return payment
 
     def find(self, payment_id: str) -> Optional[dict]:
@@ -27,6 +31,12 @@ class InMemoryPaymentRepository:
 
     def find_by_booking_id(self, booking_id: str) -> Optional[dict]:
         payment_id = self._payment_by_booking.get(booking_id)
+        if payment_id is None:
+            return None
+        return self.find(payment_id)
+
+    def find_by_provider_payment_id(self, provider_payment_id: str) -> Optional[dict]:
+        payment_id = self._payment_by_provider_payment_id.get(provider_payment_id)
         if payment_id is None:
             return None
         return self.find(payment_id)
@@ -214,7 +224,9 @@ class PostgresPaymentRepository:
                     row = cursor.fetchone()
                     return self._to_payment(row) if row else payment
         except errors.UniqueViolation as ex:
-            raise ValueError(f"payment already exists for booking: {payment['bookingId']}") from ex
+            raise ValueError(
+                "payment already exists for booking or provider payment id"
+            ) from ex
 
     def find(self, payment_id: str) -> Optional[dict]:
         with self.pool.connection() as connection:
@@ -274,6 +286,37 @@ class PostgresPaymentRepository:
                         """
                     ).format(sql.Identifier(self.schema)),
                     (booking_id,),
+                )
+                row = cursor.fetchone()
+                return self._to_payment(row) if row else None
+
+    def find_by_provider_payment_id(self, provider_payment_id: str) -> Optional[dict]:
+        with self.pool.connection() as connection:
+            with connection.cursor(row_factory=dict_row) as cursor:
+                cursor.execute(
+                    sql.SQL(
+                        """
+                        SELECT
+                            payment_id,
+                            booking_id,
+                            amount,
+                            currency,
+                            status,
+                            actor_type,
+                            user_id,
+                            provider,
+                            provider_status,
+                            provider_order_id,
+                            provider_payment_id,
+                            provider_refund_id,
+                            provider_payload,
+                            reason,
+                            updated_at
+                        FROM {}.payments
+                        WHERE provider_payment_id = %s
+                        """
+                    ).format(sql.Identifier(self.schema)),
+                    (provider_payment_id,),
                 )
                 row = cursor.fetchone()
                 return self._to_payment(row) if row else None

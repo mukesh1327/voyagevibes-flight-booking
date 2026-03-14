@@ -65,7 +65,7 @@ ensure_service "payment-service" "http://payment-service:8085"
 ensure_route "auth-service" "customer-auth-api" "customer-api.voyagevibes.in" "/api/v1/auth"
 ensure_route "flight-service" "customer-flight-api" "customer-api.voyagevibes.in" "/api/v1/flights" "/api/v1/pricing" "/api/v1/inventory"
 ensure_route "booking-service" "customer-booking-api" "customer-api.voyagevibes.in" "/api/v1/bookings"
-ensure_route "customer-service" "customer-profile-api" "customer-api.voyagevibes.in" "/api/v1/users" "/api/v1/notifications"
+ensure_route "customer-service" "customer-profile-api" "customer-api.voyagevibes.in" "/api/v1/users"
 ensure_route "payment-service" "customer-payment-api" "customer-api.voyagevibes.in" "/api/v1/payments"
 
 ensure_route "auth-service" "corp-auth-api" "corp-api.voyagevibes.in" "/api/v1/auth"

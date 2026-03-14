@@ -131,66 +131,8 @@ function buildPlan(event, channel, subject, message) {
   };
 }
 
-function notificationsForEvent(event) {
-  if (event.stream === SyncStream.BOOKING) {
-    return [
-      buildPlan(
-        event,
-        'email',
-        `Booking update: ${event.eventType}`,
-        `Booking ${event.bookingId || ''} updated with status ${event.eventType}.`
-      ),
-      buildPlan(
-        event,
-        'push',
-        'Booking timeline updated',
-        `Latest booking event: ${event.eventType}.`
-      )
-    ];
-  }
-
-  if (event.stream === SyncStream.PAYMENT) {
-    if (event.eventType === 'PAYMENT_INTENT_CREATED' || event.eventType === 'PAYMENT_AUTHORIZED') {
-      return [];
-    }
-
-    return [
-      buildPlan(
-        event,
-        'email',
-        `Payment update: ${event.eventType}`,
-        `Payment ${event.paymentId || ''} status is now ${event.eventType}.`
-      ),
-      buildPlan(
-        event,
-        'sms',
-        'Payment status update',
-        `Payment event received: ${event.eventType}.`
-      )
-    ];
-  }
-
-  if (event.stream === SyncStream.INVENTORY) {
-    if (event.eventType === 'INVENTORY_HELD') {
-      return [];
-    }
-
-    return [
-      buildPlan(
-        event,
-        'push',
-        'Trip inventory update',
-        `Inventory event received: ${event.eventType}.`
-      )
-    ];
-  }
-
-  return [];
-}
-
 module.exports = {
   SyncStream,
   normalizeExternalEvent,
-  notificationsForEvent,
   syncFieldForStream
 };

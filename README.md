@@ -13,6 +13,71 @@ Compose-managed runtime variables now live in per-service dotenv files reference
 podman compose -f docker-compose.yml up -d
 ```
 
+#### List of images used
+
+**Apps**
+```
+# Dotnet
+podman pull registry.redhat.io/rhel8/dotnet-80-runtime:latest
+```
+```
+# Java 17
+podman pull registry.redhat.io/ubi9/openjdk-17@sha256:615a2e789a3b2d982ec9e126d525697032440b1eace5dfea4fe6618cc85a7935
+```
+```
+# Java 21
+podman pull registry.access.redhat.com/ubi9/openjdk-21:1.23
+```
+```
+# NodeJS
+podman pull registry.redhat.io/ubi9/nodejs-22:9.7
+```
+```
+# Python
+podman pull registry.redhat.io/ubi9/python-39:9.7
+```
+```
+# Golang
+podman pull registry.redhat.io/ubi9/go-toolset:9.7
+```
+
+**Databases**
+```
+# Postgres
+podman pull registry.redhat.io/rhel9/postgresql-16:latest
+```
+```
+# MySQL
+podman pull registry.redhat.io/rhel9/mysql-84:latest
+```
+```
+# MSSQL
+podman pull mcr.microsoft.com/mssql/rhel/server:2025-latest
+```
+```
+# MongoDB
+podman pull quay.io/mongodb/mongodb-community-server
+```
+```
+# Redis
+podman pull registry.redhat.io/rhel9/redis-7:9.7
+```
+
+**Gateway**
+```
+podman pull docker.io/library/kong
+```
+
+**Auth**
+```
+podman pull registry.redhat.io/rhbk/keycloak-rhel9:26.2-15
+```
+
+Network tool
+```
+podman pull registry.redhat.io/openshift4/network-tools-rhel9
+```
+
 ## Services
 
 | Service | Stack | Compose file | HTTP | HTTPS | Host bind | Notes |
@@ -98,6 +163,7 @@ Service-specific compose wiring now includes:
 - `booking-service`: `HTTP_PORT`, `HTTPS_PORT`, `SERVER_SSL_*`, `KAFKA__*`, `EXTERNALSERVICES__FLIGHT__*`
 - `customer-service`: `HTTP_PORT`, `HTTPS_PORT`, `SERVER_HOST`, `SERVER_SSL_*`, `MONGODB_*`, `KAFKA_*`
 - `payment-service`: `HTTP_PORT`, `HTTPS_PORT`, `SERVER_HOST`, `SERVER_SSL_*`, `PAYMENT_DB_*`, `KAFKA_*`
+- `notification-service`: `HTTP_PORT`, `KAFKA_*`, `REDIS_*`, `POSTGRES_*`, `DEDUP_*`, `THROTTLE_*`, `RETRY_MAX_ATTEMPTS`, `EVENT_SOURCE`
 
 ## Environment Variables By Application
 
@@ -319,6 +385,29 @@ The list below reflects the variables currently consumed by application code or 
 | `KAFKA_TOPIC_PARTITIONS` | Topic partition count when ensuring topics |
 | `KAFKA_TOPIC_REPLICATION_FACTOR` | Topic replication factor when ensuring topics |
 
+### Notification Service
+
+| Variable | Purpose |
+|---|---|
+| `HTTP_PORT` | HTTP listener port |
+| `KAFKA_ENABLED` | Enable Kafka integration |
+| `KAFKA_BOOTSTRAP_SERVERS` | Kafka bootstrap servers |
+| `KAFKA_CONSUMER_GROUP_ID` | Kafka consumer group |
+| `KAFKA_BOOKING_EVENTS_TOPIC` | Booking event topic |
+| `KAFKA_PAYMENT_EVENTS_TOPIC` | Payment event topic |
+| `KAFKA_INVENTORY_EVENTS_TOPIC` | Inventory event topic |
+| `KAFKA_NOTIFICATION_EVENTS_TOPIC` | Notification event topic |
+| `REDIS_ADDR` | Redis address |
+| `REDIS_PASSWORD` | Redis password |
+| `REDIS_DB` | Redis database index |
+| `DEDUP_TTL_SECONDS` | Deduplication TTL in seconds |
+| `THROTTLE_MAX` | Max notifications per window |
+| `THROTTLE_WINDOW_SECONDS` | Throttle window in seconds |
+| `RETRY_MAX_ATTEMPTS` | Max retry attempts for failed publishes |
+| `POSTGRES_ENABLED` | Enable Postgres audit trail |
+| `POSTGRES_DSN` | Postgres DSN for audit |
+| `EVENT_SOURCE` | Event source identifier |
+
 ### Customer UI
 
 | Variable | Purpose |
@@ -513,3 +602,5 @@ curl -k -i -H "Host: corp-api.voyagevibes.in" -H "Content-Type: application/json
 
 
 <!-- curl -i -X POST http://localhost:8001/services --data "name=auth-service" --data "url=http://auth-service:8081" && curl -i -X POST http://localhost:8001/services/auth-service/routes --data "name=customer-auth-api" --data "hosts[]=customer-api.voyagevibes.in" --data "paths[]=/api/v1/auth" --data "strip_path=false" && curl -i -X POST http://localhost:8001/services/auth-service/routes --data "name=corp-auth-api" --data "hosts[]=corp-api.voyagevibes.in" --data "paths[]=/api/v1/auth" --data "strip_path=false" && curl -i -X POST http://localhost:8001/services --data "name=flight-service" --data "url=http://flight-service:8082" && curl -i -X POST http://localhost:8001/services --data "name=booking-service" --data "url=http://booking-service:8083" && curl -i -X POST http://localhost:8001/services --data "name=customer-service" --data "url=http://customer-service:8084" && curl -i -X POST http://localhost:8001/services --data "name=payment-service" --data "url=http://payment-service:8085" && curl -i -X POST http://localhost:8001/services/flight-service/routes --data "name=customer-flight-api" --data "hosts[]=customer-api.voyagevibes.in" --data "paths[]=/api/v1/flights" --data "paths[]=/api/v1/pricing" --data "paths[]=/api/v1/inventory" --data "strip_path=false" && curl -i -X POST http://localhost:8001/services/booking-service/routes --data "name=customer-booking-api" --data "hosts[]=customer-api.voyagevibes.in" --data "paths[]=/api/v1/bookings" --data "strip_path=false" && curl -i -X POST http://localhost:8001/services/customer-service/routes --data "name=customer-profile-api" --data "hosts[]=customer-api.voyagevibes.in" --data "paths[]=/api/v1/users" --data "paths[]=/api/v1/notifications" --data "strip_path=false" && curl -i -X POST http://localhost:8001/services/payment-service/routes --data "name=customer-payment-api" --data "hosts[]=customer-api.voyagevibes.in" --data "paths[]=/api/v1/payments" --data "strip_path=false" && curl -i -X POST http://localhost:8001/services/flight-service/routes --data "name=corp-flight-api" --data "hosts[]=corp-api.voyagevibes.in" --data "paths[]=/api/v1/flights" --data "paths[]=/api/v1/pricing" --data "paths[]=/api/v1/inventory" --data "strip_path=false" && curl -i -X POST http://localhost:8001/services/booking-service/routes --data "name=corp-booking-api" --data "hosts[]=corp-api.voyagevibes.in" --data "paths[]=/api/v1/bookings" --data "strip_path=false" && curl -i -X POST http://localhost:8001/services/payment-service/routes --data "name=corp-payment-api" --data "hosts[]=corp-api.voyagevibes.in" --data "paths[]=/api/v1/payments" --data "strip_path=false" -->
+
+<!-- [text](../flight-booking/00-localtest-certs/notification.voyagevibes.in.pfx) [text](../flight-booking/00-localtest-certs/notification.voyagevibes.in.p12) [text](../flight-booking/00-localtest-certs/notification.voyagevibes.in.key.pem) [text](../flight-booking/00-localtest-certs/notification.voyagevibes.in.crt.pem) [text](../flight-booking/00-localtest-certs/notification.voyagevibes.in.cer) -->

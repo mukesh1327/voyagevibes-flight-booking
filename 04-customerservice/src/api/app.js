@@ -3,7 +3,6 @@ const { InMemoryUserRepository } = require('../infrastructure/inMemoryUserReposi
 const { InMemoryNotificationRepository } = require('../infrastructure/inMemoryNotificationRepository');
 const { InMemoryEventLedgerRepository } = require('../infrastructure/inMemoryEventLedgerRepository');
 const { CustomerService } = require('../application/customerService');
-const { SyncStream } = require('../domain/syncEvent');
 const { resolveContext } = require('./context');
 
 function withHandler(handler) {
@@ -52,36 +51,6 @@ function createApp(options = {}) {
   app.post('/api/v1/users/me/mobile/verify/confirm', withHandler(async (req, res) => {
     const { userId, actorType } = resolveContext(req);
     res.json(await service.confirmMobileVerify(userId, actorType));
-  }));
-
-  app.post('/api/v1/notifications/email', withHandler(async (req, res) => {
-    const { actorType } = resolveContext(req);
-    res.json(await service.sendNotification('email', req.body || {}, actorType));
-  }));
-
-  app.post('/api/v1/notifications/sms', withHandler(async (req, res) => {
-    const { actorType } = resolveContext(req);
-    res.json(await service.sendNotification('sms', req.body || {}, actorType));
-  }));
-
-  app.post('/api/v1/notifications/push', withHandler(async (req, res) => {
-    const { actorType } = resolveContext(req);
-    res.json(await service.sendNotification('push', req.body || {}, actorType));
-  }));
-
-  app.post('/api/v1/sync/booking-events', withHandler(async (req, res) => {
-    const { actorType, correlationId } = resolveContext(req);
-    res.json(await service.syncExternalEvent(SyncStream.BOOKING, req.body || {}, actorType, correlationId));
-  }));
-
-  app.post('/api/v1/sync/payment-events', withHandler(async (req, res) => {
-    const { actorType, correlationId } = resolveContext(req);
-    res.json(await service.syncExternalEvent(SyncStream.PAYMENT, req.body || {}, actorType, correlationId));
-  }));
-
-  app.post('/api/v1/sync/inventory-events', withHandler(async (req, res) => {
-    const { actorType, correlationId } = resolveContext(req);
-    res.json(await service.syncExternalEvent(SyncStream.INVENTORY, req.body || {}, actorType, correlationId));
   }));
 
   return app;

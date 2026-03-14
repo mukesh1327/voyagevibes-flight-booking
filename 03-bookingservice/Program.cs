@@ -20,10 +20,18 @@ builder.Services.Configure<BookingServiceOptions>(builder.Configuration.GetSecti
 builder.Services.Configure<FlightServiceOptions>(builder.Configuration.GetSection("ExternalServices:Flight"));
 builder.Services.Configure<KafkaOptions>(builder.Configuration.GetSection("Kafka"));
 
+var bookingDbConnectionString = builder.Configuration.GetConnectionString("BookingDb");
+if (string.IsNullOrWhiteSpace(bookingDbConnectionString))
+{
+    throw new InvalidOperationException("BookingDb connection string is required. Set ConnectionStrings:BookingDb or ConnectionStrings__BookingDb.");
+}
+
 builder.Services.AddSingleton<BookingKafkaMetrics>();
-builder.Services.AddSingleton<IBookingRepository, InMemoryBookingRepository>();
+builder.Services.AddSingleton<IBookingRepository>(_ => new SqlBookingRepository(bookingDbConnectionString));
+builder.Services.AddSingleton<IIdempotencyStore>(_ => new SqlIdempotencyStore(bookingDbConnectionString));
 builder.Services.AddSingleton<IBookingEventPublisher, KafkaBookingEventPublisher>();
 builder.Services.AddSingleton<BookingApplicationService>();
+builder.Services.AddHostedService<BookingOutboxPublisherService>();
 
 builder.Services
     .AddHttpClient<IFlightInventoryGateway, FlightInventoryGateway>((serviceProvider, client) =>

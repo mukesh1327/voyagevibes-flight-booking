@@ -11,4 +11,14 @@ public interface FlightRepository {
   boolean reserveSeats(String flightId, int seatCount);
 
   void releaseSeats(String flightId, int seatCount);
+
+  Optional<HoldRecord> findHoldById(String holdId);
+
+  HoldRecord createHold(HoldRecord hold);
+
+  boolean updateHoldStatus(String holdId, HoldStatus status);
+
+  List<HoldRecord> findExpiredHolds(int maxCount);
+
+  int countActiveHolds();
 }

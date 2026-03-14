@@ -41,7 +41,7 @@ function loadKafkaConfig(env) {
       : 'latest',
     ssl: parseBoolean(config.KAFKA_SSL_ENABLED, false),
     sasl: parseSasl(config),
-    produceNotificationEvents: parseBoolean(config.KAFKA_PRODUCE_NOTIFICATION_EVENTS, true),
+    produceNotificationEvents: parseBoolean(config.KAFKA_PRODUCE_NOTIFICATION_EVENTS, false),
     topics: {
       booking: config.KAFKA_BOOKING_EVENTS_TOPIC || 'booking.events',
       payment: config.KAFKA_PAYMENT_EVENTS_TOPIC || 'payment.events',

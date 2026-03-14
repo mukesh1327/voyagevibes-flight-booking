@@ -100,7 +100,7 @@ class PaymentKafkaRuntime:
                 group_id=self.consumer_group_id,
                 client_id=f"{self.client_id}-consumer",
                 auto_offset_reset="earliest" if self.auto_offset_reset == "earliest" else "latest",
-                enable_auto_commit=True,
+                enable_auto_commit=False,
                 value_deserializer=lambda value: json.loads(value.decode("utf-8")),
                 consumer_timeout_ms=1000,
             )
@@ -170,9 +170,14 @@ class PaymentKafkaRuntime:
                     self.metrics.increment_consumed_booking()
                     try:
                         self.service.apply_booking_event(payload)
+                        try:
+                            self._consumer.commit()
+                        except Exception as commit_ex:
+                            self.logger.warning("kafka offset commit failed in payment-service: %s", commit_ex)
                     except Exception as ex:
                         self.metrics.increment_failed_booking()
                         self.logger.error("failed processing booking event payload: %s", ex)
+                        time.sleep(1)
             except Exception as ex:
                 self.logger.warning("kafka consume loop error in payment-service: %s", ex)
                 time.sleep(1)

@@ -39,7 +39,7 @@ public class KafkaBookingEventPublisher : IBookingEventPublisher, IDisposable
     {
         if (_producer is null)
         {
-            return;
+            throw new InvalidOperationException("Kafka producer is not initialized.");
         }
 
         try
@@ -58,6 +58,7 @@ public class KafkaBookingEventPublisher : IBookingEventPublisher, IDisposable
         {
             _metrics.IncrementFailedBookingPublishes();
             _logger.LogError(ex, "Failed to publish booking event: {EventType} for {BookingId}", bookingEvent.EventType, bookingEvent.BookingId);
+            throw;
         }
     }
 
