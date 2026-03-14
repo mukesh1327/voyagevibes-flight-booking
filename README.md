@@ -80,7 +80,7 @@ podman pull docker.io/apache/kafka:3.8.0
 
 **Network tool**
 ```
-podman pull registry.redhat.io/openshift4/network-tools-rhel9
+podman pull registry.redhat.io/openshift4/network-tools-rhel9:v4.19
 ```
 
 ## Services
