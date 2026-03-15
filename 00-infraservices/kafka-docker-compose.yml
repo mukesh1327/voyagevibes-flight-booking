@@ -8,7 +8,8 @@ services:
       - "9192:9192"
       - "9193:9093"  # Controller port
     volumes:
-      - kafka_data:/tmp/kraft-combined-logs  # Volume kafka_data
+      - kafka_data:/var/lib/kafka/data
+      - kafka_tmp:/tmp
     networks:
       - flight-booking-network
 
@@ -23,3 +24,4 @@ networks:
 
 volumes:
   kafka_data:
+  kafka_tmp:

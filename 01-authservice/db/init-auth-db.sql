@@ -44,6 +44,12 @@ ALTER TABLE auth.user_profile
     ADD COLUMN IF NOT EXISTS profile_status VARCHAR(32) NOT NULL DEFAULT 'INCOMPLETE';
 ALTER TABLE auth.user_profile
     ADD COLUMN IF NOT EXISTS mobile_verified BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE auth.user_profile
+    ADD COLUMN IF NOT EXISTS account_status VARCHAR(32) NOT NULL DEFAULT 'ACTIVE';
+ALTER TABLE auth.user_profile
+    ADD COLUMN IF NOT EXISTS department VARCHAR(100);
+ALTER TABLE auth.user_profile
+    ADD COLUMN IF NOT EXISTS manager_id VARCHAR(64);
 
 CREATE TABLE IF NOT EXISTS auth.user_session (
     session_id VARCHAR(64) PRIMARY KEY,

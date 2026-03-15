@@ -4,6 +4,7 @@ const { InMemoryNotificationRepository } = require('../infrastructure/inMemoryNo
 const { InMemoryEventLedgerRepository } = require('../infrastructure/inMemoryEventLedgerRepository');
 const { CustomerService } = require('../application/customerService');
 const { resolveContext } = require('./context');
+const { SyncStream } = require('../domain/syncEvent');
 
 function withHandler(handler) {
   return async (req, res) => {
@@ -51,6 +52,21 @@ function createApp(options = {}) {
   app.post('/api/v1/users/me/mobile/verify/confirm', withHandler(async (req, res) => {
     const { userId, actorType } = resolveContext(req);
     res.json(await service.confirmMobileVerify(userId, actorType));
+  }));
+
+  app.post('/api/v1/sync/booking-events', withHandler(async (req, res) => {
+    const { actorType, correlationId } = resolveContext(req);
+    res.json(await service.syncExternalEvent(SyncStream.BOOKING, req.body || {}, actorType, correlationId));
+  }));
+
+  app.post('/api/v1/sync/payment-events', withHandler(async (req, res) => {
+    const { actorType, correlationId } = resolveContext(req);
+    res.json(await service.syncExternalEvent(SyncStream.PAYMENT, req.body || {}, actorType, correlationId));
+  }));
+
+  app.post('/api/v1/sync/inventory-events', withHandler(async (req, res) => {
+    const { actorType, correlationId } = resolveContext(req);
+    res.json(await service.syncExternalEvent(SyncStream.INVENTORY, req.body || {}, actorType, correlationId));
   }));
 
   return app;

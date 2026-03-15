@@ -34,6 +34,24 @@ public class JdbcLoginFlowStateAdapter implements LoginFlowStatePort {
     }
 
     @Override
+    public LoginFlowState get(String state) {
+        List<LoginFlowState> rows = jdbcTemplate.query(
+            """
+                SELECT state, code_verifier, expires_at
+                FROM auth.login_flow_state
+                WHERE state = ?
+                """,
+            (rs, rowNum) -> new LoginFlowState(
+                rs.getString("state"),
+                rs.getString("code_verifier"),
+                rs.getTimestamp("expires_at").toInstant()
+            ),
+            state
+        );
+        return rows.isEmpty() ? null : rows.get(0);
+    }
+
+    @Override
     public LoginFlowState consume(String state) {
         List<LoginFlowState> rows = jdbcTemplate.query(
             """
