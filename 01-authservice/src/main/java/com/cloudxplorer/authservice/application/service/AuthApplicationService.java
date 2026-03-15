@@ -40,7 +40,7 @@ public class AuthApplicationService {
 
     private static final long FLOW_EXPIRY_SECONDS = 300;
     private static final Set<String> CORP_STEP_UP_ROLES = Set.of("CORP_ADMIN", "FINANCE_AGENT");
-    private static final List<String> CORP_FACTORS = List.of("PASSKEY", "TOTP", "EMAIL_OTP");
+    private static final List<String> CORP_FACTORS = List.of("PASSWORD");
 
     private final AuthServiceProperties properties;
     private final IdentityProviderPort identityProviderPort;
@@ -149,7 +149,7 @@ public class AuthApplicationService {
             Instant.now().plusSeconds(FLOW_EXPIRY_SECONDS)
         ));
 
-        boolean requiresStepUp = requiresStepUp(corpUser.roles());
+        boolean requiresStepUp = false;
         auditEventPort.record(
             corpUser.userId(),
             "CORP_LOGIN_INIT",
@@ -190,22 +190,31 @@ public class AuthApplicationService {
             throw new BadRequestException("CORP_FACTOR_UNSUPPORTED", "Unsupported factor type");
         }
 
-        boolean requiresStepUp = requiresStepUp(corpUser.roles());
-        if (requiresStepUp) {
-            auditEventPort.record(
-                corpUser.userId(),
-                "CORP_LOGIN_PRIMARY_VERIFIED",
-                Map.of("loginFlowId", request.loginFlowId(), "factor", normalizedFactor)
-            );
-            return new CorpLoginVerifyResponse(null, true, "MFA_REQUIRED", Map.of("loginFlowId", request.loginFlowId()));
+        if (!"PASSWORD".equalsIgnoreCase(normalizedFactor)) {
+            throw new BadRequestException("CORP_FACTOR_UNSUPPORTED", "Unsupported factor type");
+        }
+
+        IdentityAuthResult authResult = identityProviderPort.exchangeCorpPassword(corpUser.email(), request.assertion());
+        if (authResult == null || authResult.tokens() == null) {
+            throw new BadRequestException("CORP_LOGIN_FAILED", "Corporate login failed");
+        }
+        if (authResult.user() != null && authResult.user().email() != null
+            && !authResult.user().email().equalsIgnoreCase(corpUser.email())) {
+            throw new BadRequestException("CORP_IDENTITY_MISMATCH", "Corporate identity does not match request");
         }
 
         loginFlowStatePort.consume(request.loginFlowId());
-        AuthSessionResponse session = issueCorpSession(corpUser, "LOW", "corp-login", "unknown");
+        AuthSessionResponse session = issueCorpSession(
+            corpUser,
+            authResult.tokens(),
+            "LOW",
+            "corp-login",
+            "unknown"
+        );
         auditEventPort.record(
             corpUser.userId(),
             "CORP_LOGIN_SUCCESS",
-            Map.of("loginFlowId", request.loginFlowId(), "factor", normalizedFactor)
+            Map.of("loginFlowId", request.loginFlowId(), "factor", normalizedFactor, "keycloak", true)
         );
         return new CorpLoginVerifyResponse(session, false, null, Collections.emptyMap());
     }
@@ -250,7 +259,7 @@ public class AuthApplicationService {
             throw new BadRequestException("CORP_USER_DISABLED", "Corp user is disabled");
         }
 
-        AuthSessionResponse session = issueCorpSession(
+        AuthSessionResponse session = issueCorpSessionWithRandomTokens(
             corpUser,
             "MFA",
             device == null || device.isBlank() ? "corp-login" : device,
@@ -460,15 +469,35 @@ public class AuthApplicationService {
         return roles.stream().anyMatch(role -> CORP_STEP_UP_ROLES.contains(role.toUpperCase()));
     }
 
-    private AuthSessionResponse issueCorpSession(CorpUserRecord corpUser, String mfaLevel, String device, String ip) {
+    private AuthSessionResponse issueCorpSession(
+        CorpUserRecord corpUser,
+        IdentityTokens tokens,
+        String mfaLevel,
+        String device,
+        String ip
+    ) {
         UserProfile profile = userProfilePort.getByUserId(corpUser.userId());
         if (profile == null) {
             throw new NotFoundException("CORP_PROFILE_MISSING", "Corp profile is missing");
         }
 
-        IdentityTokens tokens = new IdentityTokens(randomToken(), randomToken(), 600);
         sessionPort.create(profile.userId(), device, ip, mfaLevel, tokens);
         return toAuthSessionResponse(tokens, profile, mfaLevel);
+    }
+
+    private AuthSessionResponse issueCorpSessionWithRandomTokens(
+        CorpUserRecord corpUser,
+        String mfaLevel,
+        String device,
+        String ip
+    ) {
+        return issueCorpSession(
+            corpUser,
+            new IdentityTokens(randomToken(), randomToken(), 600),
+            mfaLevel,
+            device,
+            ip
+        );
     }
 
     private static String extractCorpUserId(LoginFlowState flow) {

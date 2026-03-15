@@ -32,6 +32,22 @@ public class DevIdentityProviderAdapter implements IdentityProviderPort {
     }
 
     @Override
+    public IdentityAuthResult exchangeCorpPassword(String username, String password) {
+        String seed = username == null || username.isBlank() ? UUID.randomUUID().toString() : username;
+        IdentityUser user = new IdentityUser(
+            "corp-" + seed.replace("@", "_").replace(".", "_"),
+            username == null ? "staff@airline.com" : username,
+            "Dev",
+            "Corp",
+            "+910000000000",
+            "CORP",
+            List.of("OPS_AGENT")
+        );
+        IdentityTokens tokens = new IdentityTokens(randomToken(), randomToken(), 900);
+        return new IdentityAuthResult(user, tokens);
+    }
+
+    @Override
     public IdentityTokens refresh(String refreshToken) {
         return new IdentityTokens(randomToken(), randomToken(), 900);
     }

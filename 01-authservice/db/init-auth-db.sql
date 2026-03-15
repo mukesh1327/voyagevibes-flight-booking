@@ -98,3 +98,103 @@ CREATE INDEX IF NOT EXISTS idx_audit_event_type_created_at
 
 CREATE INDEX IF NOT EXISTS idx_audit_event_payload_gin
     ON auth.audit_event USING GIN(event_payload);
+
+-- Seed corp users for local development (idempotent)
+INSERT INTO auth.user_profile (
+    user_id,
+    email,
+    first_name,
+    last_name,
+    mobile,
+    mobile_verified,
+    realm,
+    roles_csv,
+    profile_status,
+    account_status,
+    department,
+    manager_id,
+    updated_at
+)
+SELECT
+    'corp_admin_001',
+    'admin@airline.com',
+    'Ava',
+    'Admin',
+    '9999999999',
+    true,
+    'CORP',
+    'CORP_ADMIN',
+    'COMPLETE',
+    'ACTIVE',
+    'Operations',
+    NULL,
+    NOW()
+WHERE NOT EXISTS (
+    SELECT 1 FROM auth.user_profile WHERE email = 'admin@airline.com'
+);
+
+INSERT INTO auth.user_profile (
+    user_id,
+    email,
+    first_name,
+    last_name,
+    mobile,
+    mobile_verified,
+    realm,
+    roles_csv,
+    profile_status,
+    account_status,
+    department,
+    manager_id,
+    updated_at
+)
+SELECT
+    'corp_finance_001',
+    'finance@airline.com',
+    'Noah',
+    'Finance',
+    '8888888888',
+    true,
+    'CORP',
+    'FINANCE_AGENT',
+    'COMPLETE',
+    'ACTIVE',
+    'Finance',
+    'corp_admin_001',
+    NOW()
+WHERE NOT EXISTS (
+    SELECT 1 FROM auth.user_profile WHERE email = 'finance@airline.com'
+);
+
+INSERT INTO auth.user_profile (
+    user_id,
+    email,
+    first_name,
+    last_name,
+    mobile,
+    mobile_verified,
+    realm,
+    roles_csv,
+    profile_status,
+    account_status,
+    department,
+    manager_id,
+    updated_at
+)
+SELECT
+    'corp_staff_001',
+    'staff@airline.com',
+    'Riya',
+    'Staff',
+    '7777777777',
+    true,
+    'CORP',
+    'CORP_AGENT',
+    'COMPLETE',
+    'ACTIVE',
+    'Customer Ops',
+    'corp_admin_001',
+    NOW()
+WHERE NOT EXISTS (
+    SELECT 1 FROM auth.user_profile WHERE email = 'staff@airline.com'
+);

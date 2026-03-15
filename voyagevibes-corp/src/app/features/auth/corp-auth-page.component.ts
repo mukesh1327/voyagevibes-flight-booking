@@ -88,7 +88,7 @@ import { CorpAuthService } from '../../core/services/corp-auth.service';
                   name="primaryAssertion"
                   rows="4"
                   class="w-full rounded-2xl border border-white/10 bg-white/8 px-4 py-3 text-white outline-none focus:border-cyan-300"
-                  placeholder="Enter passkey assertion, TOTP, or email OTP bootstrap token"
+                  placeholder="Enter your corporate password"
                 ></textarea>
               </label>
             </div>
@@ -150,13 +150,13 @@ export class CorpAuthPageComponent {
   protected readonly error = signal('');
   protected readonly info = signal('');
   protected readonly loginFlowId = signal('');
-  protected readonly allowedFactors = signal<string[]>(['PASSKEY', 'TOTP', 'EMAIL_OTP']);
+  protected readonly allowedFactors = signal<string[]>(['PASSWORD']);
   protected readonly challengeToken = signal('');
   protected readonly challengePreview = signal('');
 
   protected email = 'staff@airline.com';
-  protected factorType = 'PASSKEY';
-  protected primaryAssertion = 'corp-demo-primary-assertion';
+  protected factorType = 'PASSWORD';
+  protected primaryAssertion = '';
   protected mfaFactor = 'TOTP';
   protected challengeAnswer = '123456';
 
