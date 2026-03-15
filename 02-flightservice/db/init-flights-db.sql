@@ -22,6 +22,22 @@ CREATE TABLE IF NOT EXISTS flights (
   CONSTRAINT chk_flight_available_not_more_than_total CHECK (available_seats <= total_seats)
 );
 
+CREATE TABLE IF NOT EXISTS flight_holds (
+  hold_id VARCHAR(32) PRIMARY KEY,
+  booking_id VARCHAR(64),
+  flight_id VARCHAR(32) NOT NULL,
+  seat_count INT NOT NULL,
+  user_id VARCHAR(64) NOT NULL,
+  actor_type VARCHAR(20) NOT NULL,
+  status VARCHAR(20) NOT NULL,
+  expires_at TIMESTAMP NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_flight_holds_flight (flight_id),
+  INDEX idx_flight_holds_status_expires (status, expires_at),
+  CONSTRAINT chk_flight_holds_seats_positive CHECK (seat_count > 0)
+);
+
 INSERT INTO flights (
   flight_id, airline, origin_code, destination_code, departure_at, arrival_at, base_fare, total_seats, available_seats
 ) VALUES

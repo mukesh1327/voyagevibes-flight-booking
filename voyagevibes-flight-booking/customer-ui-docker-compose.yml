@@ -11,6 +11,7 @@ services:
       - "8080:8443"
     volumes:
       - ./https-certs:/etc/nginx/certs:ro
+      - nginx_logs:/opt/app-root/src/logs/nginx
     networks:
       - flight-booking-network
 
@@ -18,3 +19,6 @@ networks:
   flight-booking-network:
     external: true
     name: flight-booking-network
+
+volumes:
+  nginx_logs:

@@ -7,6 +7,7 @@ services:
     container_name: otel-collector
     volumes:
       - ./observability/otel/otel-collector-config.yml:/etc/otel-collector-config.yml
+      - nginx_logs:/var/log/nginx:ro
     command: ["--config=/etc/otel-collector-config.yml"]
     ports:
       - "4317:4317" # OTLP gRPC
@@ -50,3 +51,4 @@ networks:
 volumes:
   prometheus_data:
   grafana_data:
+  nginx_logs:

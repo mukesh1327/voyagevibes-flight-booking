@@ -27,6 +27,12 @@ Point your services to the collector:
 - OTLP endpoint: `http://opentelemetry-collector:4317`
 - Or from host: `http://localhost:4317`
 
+## UI Logs (nginx)
+
+Both UIs emit JSON access logs to a shared volume at `/opt/app-root/src/logs/nginx`.
+The collector `filelog` receivers ingest `*.access.log` and `*.error.log` from `/var/log/nginx`
+(mounted to the same volume).
+
 ## Prometheus Scrapes
 
 Prometheus is configured to scrape:

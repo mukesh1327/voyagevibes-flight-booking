@@ -34,7 +34,7 @@ authservice:
     client-secret: ${KEYCLOAK_CLIENT_SECRET_PUBLIC:}
     redirect-uri: ${PUBLIC_REDIRECT_URI:https://customer-ui.voyagevibes.in:8080/auth/google/callback}
     google-idp-alias: ${GOOGLE_IDP_ALIAS:google}
-  corp-client:
+  corp:
     realm: ${KEYCLOAK_CORP_REALM:voyagevibes-corp}
     client-id: ${KEYCLOAK_CLIENT_ID_CORP:voyagevibes-corp-web}
     client-secret: ${KEYCLOAK_CLIENT_SECRET_CORP:}

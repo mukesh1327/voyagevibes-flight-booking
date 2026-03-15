@@ -5,6 +5,11 @@ using bookingservice.Domain;
 using bookingservice.Infrastructure;
 using bookingservice.Messaging;
 using Microsoft.Extensions.Options;
+using OpenTelemetry;
+using OpenTelemetry.Logs;
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -15,6 +20,11 @@ if (activeEnv is not ("dev" or "prod"))
 }
 
 builder.Configuration.AddJsonFile($"appsettings.{activeEnv}.json", optional: true, reloadOnChange: true);
+
+if (IsOtelEnabled())
+{
+    ConfigureOpenTelemetry(builder);
+}
 
 builder.Services.Configure<BookingServiceOptions>(builder.Configuration.GetSection("BookingService"));
 builder.Services.Configure<FlightServiceOptions>(builder.Configuration.GetSection("ExternalServices:Flight"));
@@ -86,4 +96,65 @@ app.Run();
 static int ParsePort(string? value, int fallback)
 {
     return int.TryParse(value, out var parsedPort) && parsedPort > 0 ? parsedPort : fallback;
+}
+
+static bool IsOtelEnabled()
+{
+    var enabled = Environment.GetEnvironmentVariable("OTEL_ENABLED") ?? "false";
+    var disabled = Environment.GetEnvironmentVariable("OTEL_SDK_DISABLED") ?? "true";
+    return enabled.Equals("true", StringComparison.OrdinalIgnoreCase)
+        && !disabled.Equals("true", StringComparison.OrdinalIgnoreCase);
+}
+
+static void ConfigureOpenTelemetry(WebApplicationBuilder builder)
+{
+    var serviceName = Environment.GetEnvironmentVariable("OTEL_SERVICE_NAME") ?? "booking-service";
+    var endpointRaw = Environment.GetEnvironmentVariable("OTEL_EXPORTER_OTLP_ENDPOINT") ?? "http://opentelemetry-collector:4317";
+    var protocolRaw = Environment.GetEnvironmentVariable("OTEL_EXPORTER_OTLP_PROTOCOL") ?? "grpc";
+
+    var resourceBuilder = ResourceBuilder.CreateDefault()
+        .AddService(serviceName, serviceNamespace: "voyagevibes");
+
+    builder.Logging.AddOpenTelemetry(options =>
+    {
+        options.SetResourceBuilder(resourceBuilder);
+        options.IncludeScopes = true;
+        options.ParseStateValues = true;
+        options.AddOtlpExporter(otlpOptions =>
+        {
+            otlpOptions.Endpoint = new Uri(endpointRaw);
+            otlpOptions.Protocol = protocolRaw.Contains("http", StringComparison.OrdinalIgnoreCase)
+                ? OpenTelemetry.Exporter.OtlpExportProtocol.HttpProtobuf
+                : OpenTelemetry.Exporter.OtlpExportProtocol.Grpc;
+        });
+    });
+
+    builder.Services.AddOpenTelemetry()
+        .ConfigureResource(rb => rb.AddService(serviceName, serviceNamespace: "voyagevibes"))
+        .WithTracing(tracing =>
+        {
+            tracing
+                .AddAspNetCoreInstrumentation()
+                .AddHttpClientInstrumentation()
+                .AddOtlpExporter(otlpOptions =>
+                {
+                    otlpOptions.Endpoint = new Uri(endpointRaw);
+                    otlpOptions.Protocol = protocolRaw.Contains("http", StringComparison.OrdinalIgnoreCase)
+                        ? OpenTelemetry.Exporter.OtlpExportProtocol.HttpProtobuf
+                        : OpenTelemetry.Exporter.OtlpExportProtocol.Grpc;
+                });
+        })
+        .WithMetrics(metrics =>
+        {
+            metrics
+                .AddAspNetCoreInstrumentation()
+                .AddRuntimeInstrumentation()
+                .AddOtlpExporter(otlpOptions =>
+                {
+                    otlpOptions.Endpoint = new Uri(endpointRaw);
+                    otlpOptions.Protocol = protocolRaw.Contains("http", StringComparison.OrdinalIgnoreCase)
+                        ? OpenTelemetry.Exporter.OtlpExportProtocol.HttpProtobuf
+                        : OpenTelemetry.Exporter.OtlpExportProtocol.Grpc;
+                });
+        });
 }

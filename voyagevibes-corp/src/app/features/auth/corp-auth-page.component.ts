@@ -63,6 +63,18 @@ import { CorpAuthService } from '../../core/services/corp-auth.service';
                   required
                 />
               </label>
+              <label class="block">
+                <span class="mb-2 block text-sm text-slate-300">Password</span>
+                <input
+                  [(ngModel)]="password"
+                  name="password"
+                  type="password"
+                  class="w-full rounded-2xl border border-white/10 bg-white/8 px-4 py-3 text-white outline-none transition placeholder:text-slate-500 focus:border-cyan-300"
+                  placeholder="Enter your corporate password"
+                  required
+                />
+              </label>
+              <p class="text-xs text-slate-400">We will start your login and verify your password in one step.</p>
             </div>
 
             <div *ngIf="step() === 'verify'" class="space-y-4">
@@ -70,54 +82,75 @@ import { CorpAuthService } from '../../core/services/corp-auth.service';
                 Login flow <span class="font-medium text-white">{{ loginFlowId() }}</span> is active.
               </div>
 
-              <label class="block">
-                <span class="mb-2 block text-sm text-slate-300">Primary factor</span>
-                <select
-                  [(ngModel)]="factorType"
-                  name="factorType"
-                  class="w-full rounded-2xl border border-white/10 bg-white/8 px-4 py-3 text-white outline-none focus:border-cyan-300"
-                >
-                  <option *ngFor="let factor of allowedFactors()" [value]="factor">{{ factor }}</option>
-                </select>
-              </label>
+              <div class="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-slate-300">
+                Primary factor: <span class="font-medium text-white">{{ factorType }}</span>
+              </div>
 
-              <label class="block">
-                <span class="mb-2 block text-sm text-slate-300">Assertion or credential</span>
-                <textarea
-                  [(ngModel)]="primaryAssertion"
-                  name="primaryAssertion"
-                  rows="4"
-                  class="w-full rounded-2xl border border-white/10 bg-white/8 px-4 py-3 text-white outline-none focus:border-cyan-300"
-                  placeholder="Enter your corporate password"
-                ></textarea>
-              </label>
+              <ng-container *ngIf="factorType === 'PASSWORD'; else advancedPrimary">
+                <label class="block">
+                  <span class="mb-2 block text-sm text-slate-300">Password</span>
+                  <input
+                    [(ngModel)]="password"
+                    name="password"
+                    type="password"
+                    class="w-full rounded-2xl border border-white/10 bg-white/8 px-4 py-3 text-white outline-none focus:border-cyan-300"
+                    placeholder="Enter your corporate password"
+                    required
+                  />
+                </label>
+              </ng-container>
+              <ng-template #advancedPrimary>
+                <div class="rounded-2xl border border-amber-300/20 bg-amber-400/10 p-4 text-sm text-amber-100">
+                  This account requires a passkey assertion. Use advanced mode to paste the assertion string.
+                </div>
+                <label class="block">
+                  <span class="mb-2 block text-sm text-slate-300">Passkey assertion (advanced)</span>
+                  <textarea
+                    [(ngModel)]="primaryAssertion"
+                    name="primaryAssertion"
+                    rows="4"
+                    class="w-full rounded-2xl border border-white/10 bg-white/8 px-4 py-3 text-white outline-none focus:border-cyan-300"
+                    placeholder="Paste assertion JSON"
+                  ></textarea>
+                </label>
+              </ng-template>
             </div>
 
             <div *ngIf="step() === 'challenge'" class="space-y-4">
-              <label class="block">
-                <span class="mb-2 block text-sm text-slate-300">MFA factor</span>
-                <select
-                  [(ngModel)]="mfaFactor"
-                  name="mfaFactor"
-                  class="w-full rounded-2xl border border-white/10 bg-white/8 px-4 py-3 text-white outline-none focus:border-cyan-300"
-                >
-                  <option *ngFor="let factor of allowedFactors()" [value]="factor">{{ factor }}</option>
-                </select>
-              </label>
+              <div class="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-slate-300">
+                MFA factor: <span class="font-medium text-white">{{ mfaFactor }}</span>
+              </div>
 
               <div *ngIf="challengePreview()" class="rounded-2xl border border-cyan-300/20 bg-cyan-400/10 p-4 text-sm text-cyan-50">
                 {{ challengePreview() }}
               </div>
 
-              <label class="block">
-                <span class="mb-2 block text-sm text-slate-300">OTP or MFA assertion</span>
-                <input
-                  [(ngModel)]="challengeAnswer"
-                  name="challengeAnswer"
-                  class="w-full rounded-2xl border border-white/10 bg-white/8 px-4 py-3 text-white outline-none focus:border-cyan-300"
-                  placeholder="Enter OTP, passkey assertion, or challenge completion token"
-                />
-              </label>
+              <ng-container *ngIf="mfaFactor === 'TOTP' || mfaFactor === 'OTP'; else advancedMfa">
+                <label class="block">
+                  <span class="mb-2 block text-sm text-slate-300">Authenticator code</span>
+                  <input
+                    [(ngModel)]="challengeAnswer"
+                    name="challengeAnswer"
+                    inputmode="numeric"
+                    class="w-full rounded-2xl border border-white/10 bg-white/8 px-4 py-3 text-white outline-none focus:border-cyan-300"
+                    placeholder="Enter 6-digit code"
+                  />
+                </label>
+              </ng-container>
+              <ng-template #advancedMfa>
+                <div class="rounded-2xl border border-amber-300/20 bg-amber-400/10 p-4 text-sm text-amber-100">
+                  This account requires a passkey assertion for MFA. Use advanced mode to paste the assertion string.
+                </div>
+                <label class="block">
+                  <span class="mb-2 block text-sm text-slate-300">MFA assertion (advanced)</span>
+                  <input
+                    [(ngModel)]="challengeAnswer"
+                    name="challengeAnswer"
+                    class="w-full rounded-2xl border border-white/10 bg-white/8 px-4 py-3 text-white outline-none focus:border-cyan-300"
+                    placeholder="Paste assertion JSON"
+                  />
+                </label>
+              </ng-template>
             </div>
 
             <div *ngIf="error()" class="rounded-2xl border border-rose-300/20 bg-rose-400/10 px-4 py-3 text-sm text-rose-100">
@@ -158,7 +191,8 @@ export class CorpAuthPageComponent {
   protected factorType = 'PASSWORD';
   protected primaryAssertion = '';
   protected mfaFactor = 'TOTP';
-  protected challengeAnswer = '123456';
+  protected password = '';
+  protected challengeAnswer = '';
 
   protected stepLabel(): string {
     switch (this.step()) {
@@ -204,32 +238,45 @@ export class CorpAuthPageComponent {
     this.submitting.set(false);
 
     if (!response.success || !response.data) {
-      this.error.set(response.error?.message || 'Unable to initiate corp login.');
+      this.handleError(response.error?.message || 'Unable to initiate corp login.');
       return;
     }
 
     this.loginFlowId.set(response.data.loginFlowId);
     this.allowedFactors.set(response.data.allowedFactors);
-    this.factorType = response.data.allowedFactors[0] || 'PASSKEY';
-    this.mfaFactor = response.data.allowedFactors.find((item) => item !== 'PASSKEY') || response.data.allowedFactors[0] || 'TOTP';
+    const preferredPrimary = response.data.allowedFactors.includes('PASSWORD') ? 'PASSWORD' : response.data.allowedFactors[0] || 'PASSKEY';
+    this.factorType = preferredPrimary;
+    const preferredMfa = response.data.allowedFactors.includes('TOTP')
+      ? 'TOTP'
+      : response.data.allowedFactors.find((item) => item !== preferredPrimary) || response.data.allowedFactors[0] || 'TOTP';
+    this.mfaFactor = preferredMfa;
     this.step.set('verify');
-    this.info.set('Corp login initialized. Continue with primary-factor verification.');
+    this.info.set('Corp login initialized. Continue with password verification.');
+
+    if (this.factorType === 'PASSWORD' && this.password.trim()) {
+      await this.verifyPrimary();
+    }
   }
 
   private async verifyPrimary(): Promise<void> {
     this.resetMessages();
+    if (this.factorType === 'PASSWORD' && !this.password.trim()) {
+      this.error.set('Enter your corporate password to continue.');
+      return;
+    }
+
     this.submitting.set(true);
 
     const response = await this.auth.verifyPrimaryFactor({
       loginFlowId: this.loginFlowId(),
       factorType: this.factorType,
-      assertion: this.primaryAssertion,
+      assertion: this.factorType === 'PASSWORD' ? this.password : this.primaryAssertion,
     });
 
     this.submitting.set(false);
 
     if (!response.success || !response.data) {
-      this.error.set(response.error?.message || 'Primary-factor verification failed.');
+      this.handleError(response.error?.message || 'Primary-factor verification failed.');
       return;
     }
 
@@ -251,7 +298,7 @@ export class CorpAuthPageComponent {
     });
 
     if (!response.success || !response.data) {
-      this.error.set(response.error?.message || 'Unable to start MFA challenge.');
+      this.handleError(response.error?.message || 'Unable to start MFA challenge.');
       return;
     }
 
@@ -280,7 +327,7 @@ export class CorpAuthPageComponent {
     this.submitting.set(false);
 
     if (!response.success || !response.data) {
-      this.error.set(response.error?.message || 'MFA verification failed.');
+      this.handleError(response.error?.message || 'MFA verification failed.');
       return;
     }
 
@@ -291,5 +338,16 @@ export class CorpAuthPageComponent {
   private resetMessages(): void {
     this.error.set('');
     this.info.set('');
+  }
+
+  private handleError(message: string): void {
+    const normalized = message.toLowerCase();
+    if (normalized.includes('expired') || normalized.includes('invalid')) {
+      this.step.set('init');
+      this.loginFlowId.set('');
+      this.info.set('Login flow expired. Please start again.');
+      return;
+    }
+    this.error.set(message);
   }
 }

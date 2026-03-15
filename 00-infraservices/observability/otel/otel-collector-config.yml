@@ -3,13 +3,36 @@ receivers:
     protocols:
       grpc:
       http:
+  filelog/nginx_access:
+    include:
+      - /var/log/nginx/*.access.log
+    start_at: beginning
+    operators:
+      - type: json_parser
+        parse_from: body
+  filelog/nginx_error:
+    include:
+      - /var/log/nginx/*.error.log
+    start_at: beginning
 
 processors:
   batch:
+  resource/nginx:
+    attributes:
+      - action: insert
+        key: service.name
+        value: nginx
+      - action: upsert
+        key: service.name
+        from_attribute: service
+      - action: delete
+        key: service
 
 exporters:
   prometheus:
     endpoint: "0.0.0.0:8889"
+  debug:
+    verbosity: basic
 
 service:
   pipelines:
@@ -17,3 +40,15 @@ service:
       receivers: [otlp]
       processors: [batch]
       exporters: [prometheus]
+    traces:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [debug]
+    logs/otlp:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [debug]
+    logs/nginx:
+      receivers: [filelog/nginx_access, filelog/nginx_error]
+      processors: [resource/nginx, batch]
+      exporters: [debug]

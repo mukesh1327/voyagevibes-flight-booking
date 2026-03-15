@@ -4,3 +4,8 @@ kafka-python==2.0.2
 razorpay==1.4.2
 psycopg[binary]==3.2.9
 psycopg-pool==3.2.6
+opentelemetry-api==1.30.0
+opentelemetry-sdk==1.30.0
+opentelemetry-exporter-otlp==1.30.0
+opentelemetry-instrumentation-fastapi==0.51b0
+opentelemetry-instrumentation-requests==0.51b0

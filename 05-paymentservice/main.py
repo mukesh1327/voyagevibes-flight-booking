@@ -12,9 +12,11 @@ from fastapi import FastAPI, Header, HTTPException
 from app.actor import actor_type_from_context
 from app.kafka_runtime import PaymentKafkaRuntime
 from app.models import PaymentActionRequest, PaymentIntentRequest, PaymentWebhookRequest
+from app.observability import configure as configure_otel
 from app.providers import RazorpayGateway
 from app.repository import create_repository_from_env
 from app.service import PaymentService
+from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 
 service = PaymentService(create_repository_from_env(), razorpay_gateway=RazorpayGateway())
 kafka_runtime = PaymentKafkaRuntime(service)
@@ -72,6 +74,9 @@ async def lifespan(_app: FastAPI):
 
 
 app = FastAPI(title="VoyageVibes Payment Service", version="1.0.0", lifespan=lifespan)
+otel_logger_provider = configure_otel("payment-service")
+if otel_logger_provider:
+    FastAPIInstrumentor.instrument_app(app)
 
 
 def _parse_bool(value: Optional[str], default: bool) -> bool:

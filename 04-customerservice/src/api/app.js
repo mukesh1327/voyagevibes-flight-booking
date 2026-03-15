@@ -5,6 +5,7 @@ const { InMemoryEventLedgerRepository } = require('../infrastructure/inMemoryEve
 const { CustomerService } = require('../application/customerService');
 const { resolveContext } = require('./context');
 const { SyncStream } = require('../domain/syncEvent');
+const { init: initOtel, middleware: otelMiddleware } = require('../observability/otel');
 
 function withHandler(handler) {
   return async (req, res) => {
@@ -20,8 +21,10 @@ function withHandler(handler) {
 }
 
 function createApp(options = {}) {
+  initOtel();
   const app = express();
   app.use(express.json());
+  app.use(otelMiddleware());
 
   const service = options.service || new CustomerService(
     new InMemoryUserRepository(),

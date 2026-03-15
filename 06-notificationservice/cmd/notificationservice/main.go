@@ -17,6 +17,7 @@ import (
 
 	"notificationservice/internal/app"
 	"notificationservice/internal/config"
+	"notificationservice/internal/observability"
 	kafkainfra "notificationservice/internal/infra/kafka"
 	postgresinfra "notificationservice/internal/infra/postgres"
 	redisinfra "notificationservice/internal/infra/redis"
@@ -84,6 +85,16 @@ func main() {
 		logger.Fatalf("failed to wire service: %v", err)
 	}
 
+	shutdownOtel, otelEnabled, err := observability.Setup(ctx, observability.FromEnv("notification-service"))
+	if err != nil {
+		logger.Printf("otel setup failed: %v", err)
+	}
+	if shutdownOtel != nil {
+		defer func() {
+			_ = shutdownOtel(context.Background())
+		}()
+	}
+
 	var wg sync.WaitGroup
 	if cfg.KafkaEnabled {
 		topics := []string{cfg.BookingTopic, cfg.PaymentTopic, cfg.InventoryTopic}
@@ -108,6 +119,9 @@ func main() {
 			KafkaEnabled:    cfg.KafkaEnabled,
 		},
 	})
+	if otelEnabled {
+		handler = observability.WrapHandler(handler, "notification-service")
+	}
 
 	addr := fmt.Sprintf(":%d", cfg.HttpPort)
 	if cfg.HttpHost != "" {

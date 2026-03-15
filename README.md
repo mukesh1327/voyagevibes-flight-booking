@@ -124,6 +124,21 @@ podman compose -f docker-compose.yml up --build
 
 If you prefer to bring up services individually, use the compose file in each service directory listed above.
 
+## Observability (OpenTelemetry SDK)
+
+Each service now initializes the OpenTelemetry SDK directly (logs, traces, metrics). To enable:
+
+```bash
+OTEL_ENABLED=true
+OTEL_SDK_DISABLED=false
+```
+
+Default OTLP endpoints (per `.env`) point to the collector:
+- gRPC: `http://opentelemetry-collector:4317`
+- HTTP: `http://opentelemetry-collector:4318`
+
+The UI (nginx) emits JSON access logs to a shared volume and the collector ingests access/error logs via `filelog`.
+
 ## UI Hostnames And TLS
 
 - `voyagevibes-flight-booking` serves on `https://customer-ui.voyagevibes.in:8080` using certs from `voyagevibes-flight-booking/https-certs`
@@ -169,6 +184,19 @@ Service-specific compose wiring now includes:
 - `customer-service`: `HTTP_PORT`, `HTTPS_PORT`, `SERVER_HOST`, `SERVER_SSL_*`, `MONGODB_*`, `KAFKA_*`
 - `payment-service`: `HTTP_PORT`, `HTTPS_PORT`, `SERVER_HOST`, `SERVER_SSL_*`, `PAYMENT_DB_*`, `KAFKA_*`
 - `notification-service`: `HTTP_PORT`, `KAFKA_*`, `REDIS_*`, `POSTGRES_*`, `DEDUP_*`, `THROTTLE_*`, `RETRY_MAX_ATTEMPTS`, `EVENT_SOURCE`
+
+## OpenTelemetry (Shared)
+
+All services read these variables when SDK export is enabled:
+
+| Variable | Purpose |
+|---|---|
+| `OTEL_ENABLED` | Toggle SDK export (`true` / `false`) |
+| `OTEL_SDK_DISABLED` | Disable flag (`true` disables) |
+| `OTEL_SERVICE_NAME` | Service name for resource |
+| `OTEL_RESOURCE_ATTRIBUTES` | Optional resource attributes |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | OTLP endpoint |
+| `OTEL_EXPORTER_OTLP_PROTOCOL` | `grpc` or `http` |
 
 ## Environment Variables By Application
 
