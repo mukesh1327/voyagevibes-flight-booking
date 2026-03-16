@@ -1,0 +1,155 @@
+{
+  "uid": "voyagevibes-services",
+  "title": "VoyageVibes Services Overview",
+  "timezone": "browser",
+  "schemaVersion": 38,
+  "version": 1,
+  "refresh": "30s",
+  "time": {
+    "from": "now-15m",
+    "to": "now"
+  },
+  "templating": {
+    "list": [
+      {
+        "name": "service",
+        "type": "query",
+        "datasource": "Prometheus",
+        "refresh": 1,
+        "query": "label_values(http_server_duration_seconds_count, service_name)",
+        "includeAll": true,
+        "allValue": ".*",
+        "multi": true,
+        "sort": 1
+      }
+    ]
+  },
+  "panels": [
+    {
+      "type": "stat",
+      "title": "Services Reporting HTTP Metrics",
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": "Prometheus",
+          "expr": "count(count by (service_name) (http_server_duration_seconds_count{service_name=~\"$service\"}))",
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "HTTP Requests per Second by Service",
+      "gridPos": { "h": 8, "w": 18, "x": 6, "y": 0 },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": "Prometheus",
+          "expr": "sum by (service_name) (rate(http_server_duration_seconds_count{service_name=~\"$service\"}[5m]))",
+          "legendFormat": "{{service_name}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps"
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "HTTP 5xx Rate by Service",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 4 },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": "Prometheus",
+          "expr": "sum by (service_name) (rate(http_server_duration_seconds_count{service_name=~\"$service\", http_status_code=~\"5..\"}[5m]))",
+          "legendFormat": "{{service_name}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps"
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "HTTP p95 Latency by Service",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 4 },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": "Prometheus",
+          "expr": "histogram_quantile(0.95, sum by (le, service_name) (rate(http_server_duration_seconds_bucket{service_name=~\"$service\"}[5m])))",
+          "legendFormat": "{{service_name}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Process CPU (cores) by Service",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 12 },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": "Prometheus",
+          "expr": "sum by (service_name) (rate(process_cpu_time_seconds_total{service_name=~\"$service\"}[5m]))",
+          "legendFormat": "{{service_name}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "cores"
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Process Memory (MB) by Service",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 12 },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": "Prometheus",
+          "expr": "sum by (service_name) (process_resident_memory_bytes{service_name=~\"$service\"}) / 1024 / 1024",
+          "legendFormat": "{{service_name}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "mbytes"
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Collector Metrics Ingest Rate",
+      "gridPos": { "h": 6, "w": 24, "x": 0, "y": 20 },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": "Prometheus",
+          "expr": "sum(rate(otelcol_receiver_accepted_metric_points[5m]))",
+          "legendFormat": "accepted points/sec"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      }
+    }
+  ]
+}

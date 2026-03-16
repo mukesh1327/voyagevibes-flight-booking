@@ -2,26 +2,6 @@ services:
 
 # ================= Flight Service ========================
 
-# Flight service MySQL DB
-  flightservice_mysql:
-    image: registry.redhat.io/rhel9/mysql-84:latest
-    container_name: flightservice_mysql
-    env_file:
-      - ./.env.mysql.db
-    ports:
-      - "3306:3306"
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p$$MYSQL_ROOT_PASSWORD"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-    volumes:
-      - flightservice_mysql_data:/var/lib/mysql/data
-    networks:
-      - flight-booking-network
-
-# -----------
-
 # Flight service DB initialization
   flightservice_mysql_init:
     image: registry.redhat.io/rhel9/mysql-84:latest
@@ -31,11 +11,11 @@ services:
       - ./.env.mysql.init
     command: >
       sh -ec "
-        until mysqladmin ping -h flightservice_mysql -u root --silent; do sleep 2; done;
-        mysql -h flightservice_mysql -u root < /init/init-flights-db.sql
+        until mysqladmin ping -h platform_mysql -u root --silent; do sleep 2; done;
+        mysql -h platform_mysql -u root < /init/init-flights-db.sql
       "
     depends_on:
-      flightservice_mysql:
+      platform_mysql:
         condition: service_healthy
     volumes:
       - ./db:/init:ro
@@ -59,7 +39,7 @@ services:
     depends_on:
       auth-service:
         condition: service_started
-      flightservice_mysql:
+      platform_mysql:
         condition: service_healthy
       flightservice_mysql_init:
         condition: service_completed_successfully
@@ -74,8 +54,3 @@ networks:
   flight-booking-network:
     name: flight-booking-network
     driver: bridge
-
-# ================= Volumes ========================
-
-volumes:
-  flightservice_mysql_data:

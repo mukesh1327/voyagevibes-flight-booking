@@ -2,12 +2,16 @@
 
 include:
 
+# Databases
+  - ./00-infraservices/databases-docker-compose.yml
+
 # Observability stack
   - ./00-infraservices/observability-docker-compose.yml
 
 # Infra services
   - ./00-infraservices/kafka-docker-compose.yml
   - ./00-infraservices/kong-gateway-docker-compose.yml
+  - ./00-infraservices/keycloak-docker-compose.yml
 
 # Auth service
   - ./01-authservice/authservice-docker-compose.yml

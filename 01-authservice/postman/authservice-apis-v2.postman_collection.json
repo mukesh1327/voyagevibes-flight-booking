@@ -1,166 +1,429 @@
 {
-  "info": {
-    "name": "auth-service APIs",
-    "_postman_id": "authservice-collection",
-    "description": "Collection aligned to README API plan for auth-service.",
-    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
-  },
-  "item": [
-    {
-      "name": "Health",
-      "item": [
-        {
-          "name": "GET /api/v1/health",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": "{{baseUrl}}/api/v1/health"
-          }
-        },
-        {
-          "name": "GET /api/v1/health/ready",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": "{{baseUrl}}/api/v1/health/ready"
-          }
-        },
-        {
-          "name": "GET /api/v1/health/live",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": "{{baseUrl}}/api/v1/health/live"
-          }
-        }
-      ]
-    },
-    {
-      "name": "Auth APIs",
-      "item": [
-        {
-          "name": "GET /api/v1/auth/public/google/start",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": "{{baseUrl}}/api/v1/auth/public/google/start"
-          }
-        },
-        {
-          "name": "GET /api/v1/auth/public/google/callback",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": "{{baseUrl}}/api/v1/auth/public/google/callback?code={{code}}&state={{state}}"
-          }
-        },
-        {
-          "name": "POST /api/v1/auth/token/refresh",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
-            },
-            "url": "{{baseUrl}}/api/v1/auth/token/refresh"
-          }
-        },
-        {
-          "name": "POST /api/v1/auth/logout",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "X-User-Id",
-                "value": "{{userId}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\",\n  \"allSessions\": true\n}"
-            },
-            "url": "{{baseUrl}}/api/v1/auth/logout"
-          }
-        },
-        {
-          "name": "POST /api/v1/auth/corp/login/init",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"identifier\": \"staff@voyagevibes.dev\",\n  \"device\": {\n    \"deviceId\": \"corp-device-1\",\n    \"platform\": \"web\"\n  }\n}"
-            },
-            "url": "{{baseUrl}}/api/v1/auth/corp/login/init"
-          }
-        },
-        {
-          "name": "POST /api/v1/auth/corp/login/verify",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"flowId\": \"{{flowId}}\",\n  \"credential\": \"{{credential}}\"\n}"
-            },
-            "url": "{{baseUrl}}/api/v1/auth/corp/login/verify"
-          }
-        },
-        {
-          "name": "POST /api/v1/auth/corp/mfa/challenge",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"flowId\": \"{{flowId}}\",\n  \"method\": \"{{mfaMethod}}\"\n}"
-            },
-            "url": "{{baseUrl}}/api/v1/auth/corp/mfa/challenge"
-          }
-        },
-        {
-          "name": "POST /api/v1/auth/corp/mfa/verify",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"flowId\": \"{{flowId}}\",\n  \"code\": \"{{mfaCode}}\"\n}"
-            },
-            "url": "{{baseUrl}}/api/v1/auth/corp/mfa/verify"
-          }
-        }
-      ]
-    }
-  ]
+    "info":  {
+                 "name":  "auth-service APIs",
+                 "_postman_id":  "authservice-collection",
+                 "description":  "Collection aligned to README API plan for auth-service.",
+                 "schema":  "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+             },
+    "item":  [
+                 {
+                     "name":  "Health",
+                     "item":  [
+                                  {
+                                      "name":  "GET /api/v1/health",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+
+                                                                 ],
+                                                      "url":  "{{baseUrl}}/api/v1/health"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "GET /api/v1/health/ready",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+
+                                                                 ],
+                                                      "url":  "{{baseUrl}}/api/v1/health/ready"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "GET /api/v1/health/live",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+
+                                                                 ],
+                                                      "url":  "{{baseUrl}}/api/v1/health/live"
+                                                  }
+                                  }
+                              ]
+                 },
+                 {
+                     "name":  "Auth APIs",
+                     "item":  [
+                                  {
+                                      "name":  "GET /api/v1/auth/public/google/start",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+
+                                                                 ],
+                                                      "url":  "{{baseUrl}}/api/v1/auth/public/google/start"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "GET /api/v1/auth/public/google/callback",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+
+                                                                 ],
+                                                      "url":  "{{baseUrl}}/api/v1/auth/public/google/callback?code={{code}}\u0026state={{state}}"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "POST /api/v1/auth/token/refresh",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+                                                               },
+                                                      "url":  "{{baseUrl}}/api/v1/auth/token/refresh"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "POST /api/v1/auth/logout",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     },
+                                                                     {
+                                                                         "key":  "X-User-Id",
+                                                                         "value":  "{{userId}}"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"refreshToken\": \"{{refreshToken}}\",\n  \"allSessions\": true\n}"
+                                                               },
+                                                      "url":  "{{baseUrl}}/api/v1/auth/logout"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "POST /api/v1/auth/corp/login/init",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"identifier\": \"staff@voyagevibes.dev\",\n  \"device\": {\n    \"deviceId\": \"corp-device-1\",\n    \"platform\": \"web\"\n  }\n}"
+                                                               },
+                                                      "url":  "{{baseUrl}}/api/v1/auth/corp/login/init"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "POST /api/v1/auth/corp/login/verify",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"flowId\": \"{{flowId}}\",\n  \"credential\": \"{{credential}}\"\n}"
+                                                               },
+                                                      "url":  "{{baseUrl}}/api/v1/auth/corp/login/verify"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "POST /api/v1/auth/corp/mfa/challenge",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"flowId\": \"{{flowId}}\",\n  \"method\": \"{{mfaMethod}}\"\n}"
+                                                               },
+                                                      "url":  "{{baseUrl}}/api/v1/auth/corp/mfa/challenge"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "POST /api/v1/auth/corp/mfa/verify",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"flowId\": \"{{flowId}}\",\n  \"code\": \"{{mfaCode}}\"\n}"
+                                                               },
+                                                      "url":  "{{baseUrl}}/api/v1/auth/corp/mfa/verify"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "POST /api/v1/auth/public/logout",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "X-User-Id",
+                                                                         "value":  "{{userId}}"
+                                                                     },
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "url":  "{{baseUrl}}/api/v1/auth/public/logout",
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"refreshToken\": \"{{refreshToken}}\",\n  \"allSessions\": true\n}"
+                                                               }
+                                                  }
+                                  },
+                                  {
+                                      "name":  "POST /api/v1/auth/public/step-up/otp/request",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "url":  "{{baseUrl}}/api/v1/auth/public/step-up/otp/request",
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"purpose\": \"{{otpPurpose}}\",\n  \"channel\": \"{{otpChannel}}\",\n  \"emailOrPhone\": \"{{otpDestination}}\"\n}"
+                                                               }
+                                                  }
+                                  },
+                                  {
+                                      "name":  "POST /api/v1/auth/public/step-up/otp/verify",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "url":  "{{baseUrl}}/api/v1/auth/public/step-up/otp/verify",
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"challengeId\": \"{{otpChallengeId}}\",\n  \"otp\": \"{{otpCode}}\"\n}"
+                                                               }
+                                                  }
+                                  },
+                                  {
+                                      "name":  "POST /api/v1/auth/corp/logout",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "X-User-Id",
+                                                                         "value":  "{{userId}}"
+                                                                     },
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "url":  "{{baseUrl}}/api/v1/auth/corp/logout",
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"refreshToken\": \"{{refreshToken}}\",\n  \"allSessions\": true\n}"
+                                                               }
+                                                  }
+                                  }
+                              ]
+                 },
+                 {
+                     "name":  "User APIs",
+                     "item":  [
+                                  {
+                                      "name":  "GET /api/v1/users/me",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "X-User-Id",
+                                                                         "value":  "{{userId}}"
+                                                                     }
+                                                                 ],
+                                                      "url":  "{{baseUrl}}/api/v1/users/me"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "PATCH /api/v1/users/me",
+                                      "request":  {
+                                                      "method":  "PATCH",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "X-User-Id",
+                                                                         "value":  "{{userId}}"
+                                                                     },
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "url":  "{{baseUrl}}/api/v1/users/me",
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"firstName\": \"Ava\",\n  \"lastName\": \"Admin\",\n  \"mobile\": \"9999999999\",\n  \"preferences\": {\n    \"seat\": \"window\"\n  }\n}"
+                                                               }
+                                                  }
+                                  }
+                              ]
+                 },
+                 {
+                     "name":  "Session APIs",
+                     "item":  [
+                                  {
+                                      "name":  "GET /api/v1/sessions/me",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "X-User-Id",
+                                                                         "value":  "{{userId}}"
+                                                                     }
+                                                                 ],
+                                                      "url":  "{{baseUrl}}/api/v1/sessions/me"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "DELETE /api/v1/sessions/me/{{sessionId}}",
+                                      "request":  {
+                                                      "method":  "DELETE",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "X-User-Id",
+                                                                         "value":  "{{userId}}"
+                                                                     }
+                                                                 ],
+                                                      "url":  "{{baseUrl}}/api/v1/sessions/me/{{sessionId}}"
+                                                  }
+                                  }
+                              ]
+                 },
+                 {
+                     "name":  "Corp User APIs",
+                     "item":  [
+                                  {
+                                      "name":  "POST /api/v1/corp/users",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "url":  "{{baseUrl}}/api/v1/corp/users",
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"email\": \"{{corpUserEmail}}\",\n  \"roleIds\": [\"{{corpRoleId}}\"],\n  \"department\": \"{{corpDepartment}}\",\n  \"managerId\": \"{{corpManagerId}}\"\n}"
+                                                               }
+                                                  }
+                                  },
+                                  {
+                                      "name":  "PATCH /api/v1/corp/users/{{corpUserId}}",
+                                      "request":  {
+                                                      "method":  "PATCH",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "url":  "{{baseUrl}}/api/v1/corp/users/{{corpUserId}}",
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"status\": \"ACTIVE\",\n  \"department\": \"{{corpDepartment}}\",\n  \"managerId\": \"{{corpManagerId}}\"\n}"
+                                                               }
+                                                  }
+                                  },
+                                  {
+                                      "name":  "POST /api/v1/corp/users/{{corpUserId}}/enable",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+
+                                                                 ],
+                                                      "url":  "{{baseUrl}}/api/v1/corp/users/{{corpUserId}}/enable"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "POST /api/v1/corp/users/{{corpUserId}}/disable",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+
+                                                                 ],
+                                                      "url":  "{{baseUrl}}/api/v1/corp/users/{{corpUserId}}/disable"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "POST /api/v1/corp/users/{{corpUserId}}/roles",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "url":  "{{baseUrl}}/api/v1/corp/users/{{corpUserId}}/roles",
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"roleId\": \"{{corpRoleId}}\"\n}"
+                                                               }
+                                                  }
+                                  },
+                                  {
+                                      "name":  "DELETE /api/v1/corp/users/{{corpUserId}}/roles/{{corpRoleId}}",
+                                      "request":  {
+                                                      "method":  "DELETE",
+                                                      "header":  [
+
+                                                                 ],
+                                                      "url":  "{{baseUrl}}/api/v1/corp/users/{{corpUserId}}/roles/{{corpRoleId}}"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "POST /api/v1/corp/users/{{corpUserId}}/force-mfa-reset",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+
+                                                                 ],
+                                                      "url":  "{{baseUrl}}/api/v1/corp/users/{{corpUserId}}/force-mfa-reset"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "POST /api/v1/corp/users/{{corpUserId}}/session-revoke",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+
+                                                                 ],
+                                                      "url":  "{{baseUrl}}/api/v1/corp/users/{{corpUserId}}/session-revoke"
+                                                  }
+                                  }
+                              ]
+                 }
+             ]
 }
+

@@ -13,6 +13,8 @@ Compose-managed runtime variables now live in per-service dotenv files reference
 podman compose -f docker-compose.yml up -d
 ```
 
+Databases are centralized in `00-infraservices/databases-docker-compose.yml` with a shared Postgres instance and a bootstrap init for Keycloak and Kong.
+
 #### List of images used
 
 **Apps**
@@ -87,7 +89,8 @@ podman pull registry.redhat.io/openshift4/network-tools-rhel9:v4.19
 
 | Service | Stack | Compose file | HTTP | HTTPS | Host bind | Notes |
 |---|---|---|---|---|---|---|
-| `kong_gateway` | Kong + PostgreSQL | `00-infraservices/kong-gateway-docker-compose.yml` | `8000` | `8443` | `0.0.0.0` | Admin API on `8001` |
+| `kong_gateway` | Kong + shared Postgres | `00-infraservices/kong-gateway-docker-compose.yml` | `8000` | `8443` | `0.0.0.0` | Admin API on `8001` |
+| `keycloak` | Keycloak + shared Postgres | `00-infraservices/keycloak-docker-compose.yml` | `8090` | `8091` | `0.0.0.0` | Identity provider |
 | `auth-service` | Spring Boot + PostgreSQL | `01-authservice/authservice-docker-compose.yml` | `8081` | `9091` | `0.0.0.0` | Keycloak-backed auth APIs |
 | `flight-service` | Quarkus + MySQL | `02-flightservice/flightservice-docker-compose.yml` | `8082` | `9092` | `0.0.0.0` | HTTP and HTTPS both enabled |
 | `booking-service` | .NET 8 + MSSQL | `03-bookingservice/bookingservice-docker-compose.yml` | `8083` | `9093` | `0.0.0.0` | Uses flight-service over HTTP |
@@ -99,10 +102,19 @@ podman pull registry.redhat.io/openshift4/network-tools-rhel9:v4.19
 | Service | Direct HTTP | Direct HTTPS | Internal HTTP | Internal HTTPS |
 |---|---|---|---|---|
 | `auth-service` | `http://localhost:8081` | `https://localhost:9091` | `http://auth-service:8081` | `https://auth-service:9091` |
+| `keycloak` | `http://localhost:8090` | `https://localhost:8091` | `http://keycloak:8080` | `https://keycloak:8443` |
 | `flight-service` | `http://localhost:8082` | `https://localhost:9092` | `http://flight-service:8082` | `https://flight-service:9092` |
 | `booking-service` | `http://localhost:8083` | `https://localhost:9093` | `http://booking-service:8083` | `https://booking-service:9093` |
 | `customer-service` | `http://localhost:8084` | `https://localhost:9094` | `http://customer-service:8084` | `https://customer-service:9094` |
 | `payment-service` | `http://localhost:8085` | `https://localhost:9095` | `http://payment-service:8085` | `https://payment-service:9095` |
+
+## Databases
+
+- `platform_postgres` (PostgreSQL 16) shared by auth-service, payment-service, keycloak, and kong.
+- `platform_mysql` (MySQL 8.4) used by flight-service.
+- `platform_mssql` (SQL Server 2025) used by booking-service.
+- `platform_mongodb` (MongoDB Community) used by customer-service.
+- `platform_postgres_init` bootstraps Keycloak and Kong databases from `00-infraservices/init-db-files`.
 
 ## Kong Gateway
 
@@ -224,35 +236,25 @@ The list below reflects the variables currently consumed by application code or 
 
 | Variable | Purpose |
 |---|---|
-| `KEYCLOAK_POSTGRES_DB` | Keycloak Postgres DB name |
-| `KEYCLOAK_POSTGRES_USER` | Keycloak Postgres DB user |
-| `KEYCLOAK_POSTGRES_PASSWORD` | Keycloak Postgres DB password |
-| `KEYCLOAK_HOST_HTTP_PORT` | Host bind for Keycloak HTTP |
-| `KEYCLOAK_HOST_HTTPS_PORT` | Host bind for Keycloak HTTPS |
-| `KEYCLOAK_ADMIN_USER` | Bootstrap admin username |
-| `KEYCLOAK_ADMIN_PASSWORD` | Bootstrap admin password |
-| `KEYCLOAK_HOSTNAME` | Public Keycloak hostname |
-| `KEYCLOAK_HOSTNAME_STRICT` | Enforce strict hostname handling |
-| `KEYCLOAK_DB` | Keycloak DB backend |
-| `KEYCLOAK_DB_USERNAME` | Keycloak DB user |
-| `KEYCLOAK_DB_PASSWORD` | Keycloak DB password |
-| `KEYCLOAK_HTTP_ENABLED` | Enable HTTP listener |
-| `KEYCLOAK_PROXY_HEADERS` | Proxy header mode |
-| `KEYCLOAK_HTTPS_KEY_STORE_PASSWORD` | HTTPS keystore password |
-| `KC_BOOTSTRAP_ADMIN_USERNAME` | Effective bootstrap admin username |
-| `KC_BOOTSTRAP_ADMIN_PASSWORD` | Effective bootstrap admin password |
-| `KC_HOSTNAME` | Effective public hostname |
+| `KEYCLOAK_DB_NAME` | Keycloak database name for shared Postgres bootstrap |
+| `KEYCLOAK_DB_USER` | Keycloak database user for shared Postgres bootstrap |
+| `KEYCLOAK_DB_PASSWORD` | Keycloak database password for shared Postgres bootstrap |
+| `KC_BOOTSTRAP_ADMIN_USERNAME` | Bootstrap admin username |
+| `KC_BOOTSTRAP_ADMIN_PASSWORD` | Bootstrap admin password |
+| `KC_HOSTNAME` | Public Keycloak hostname |
+| `KC_HOSTNAME_STRICT` | Enforce strict hostname handling |
+| `KC_DB` | Keycloak DB vendor |
 | `KC_DB_URL` | JDBC URL for Keycloak DB |
-| `KC_HOSTNAME_STRICT` | Effective strict hostname toggle |
-| `KC_DB` | Effective DB backend |
-| `KC_DB_USERNAME` | Effective DB user |
-| `KC_DB_PASSWORD` | Effective DB password |
-| `KC_HTTP_ENABLED` | Effective HTTP enablement |
-| `KC_PROXY_HEADERS` | Effective proxy header mode |
+| `KC_DB_USERNAME` | Keycloak DB user |
+| `KC_DB_PASSWORD` | Keycloak DB password |
+| `KC_HTTP_ENABLED` | Enable HTTP listener |
+| `KC_PROXY_HEADERS` | Proxy header mode |
 | `KC_HTTPS_KEY_STORE_FILE` | HTTPS keystore file path |
-| `KC_HTTPS_KEY_STORE_PASSWORD` | Effective HTTPS keystore password |
+| `KC_HTTPS_KEY_STORE_PASSWORD` | HTTPS keystore password |
 | `KC_HTTPS_KEY_STORE_TYPE` | HTTPS keystore type |
 | `KC_HEALTH_ENABLED` | Enable health endpoints |
+| `KC_METRICS_ENABLED` | Enable metrics endpoints |
+| `KC_LOG_LEVEL` | Log verbosity |
 
 ### Auth Service
 

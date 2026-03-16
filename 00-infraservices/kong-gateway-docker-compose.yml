@@ -1,22 +1,24 @@
 services:
 
-  kong_postgres:
+  kong_postgres_init:
     image: registry.redhat.io/rhel9/postgresql-16:latest
-    container_name: kong_postgres
-    restart: always
+    container_name: kong_postgres_init
+    restart: "no"
     env_file:
+      - ./.env.databases
       - ./.env.kong
+    command: >
+      sh -ec "
+        until pg_isready -h platform_postgres -U $$POSTGRESQL_USER -d $$POSTGRESQL_DATABASE; do sleep 2; done;
+        psql -h platform_postgres -U $$POSTGRESQL_USER -d $$POSTGRESQL_DATABASE -v ON_ERROR_STOP=1 -f /init/kong-init.sql
+      "
+    depends_on:
+      platform_postgres:
+        condition: service_healthy
     volumes:
-      - kong_postgres_data:/var/lib/pgsql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $$POSTGRESQL_USER -d $$POSTGRESQL_DATABASE -h localhost"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
+      - ./init-db-files:/init:ro
     networks:
       - flight-booking-network
-
-# -----------
 
   kong-migrations:
     image: docker.io/library/kong
@@ -29,8 +31,10 @@ services:
     volumes:
       - ./https-certs/kong-certs:/etc/kong/certs:ro
     depends_on:
-      kong_postgres:
+      platform_postgres:
         condition: service_healthy
+      kong_postgres_init:
+        condition: service_completed_successfully
     networks:
       - flight-booking-network
 
@@ -48,8 +52,10 @@ services:
     volumes:
       - ./https-certs/kong-certs:/etc/kong/certs:ro
     depends_on:
-      kong_postgres:
+      platform_postgres:
         condition: service_healthy
+      kong_postgres_init:
+        condition: service_completed_successfully
       kong-migrations:
         condition: service_completed_successfully
     networks:
@@ -75,8 +81,3 @@ networks:
   flight-booking-network:
     name: flight-booking-network
     driver: bridge
-
-# ================= Volumes ========================
-
-volumes:
-  kong_postgres_data:

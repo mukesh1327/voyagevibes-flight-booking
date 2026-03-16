@@ -1,0 +1,68 @@
+{
+    "info":  {
+                 "name":  "notification-service APIs",
+                 "_postman_id":  "notificationservice-collection",
+                 "description":  "Collection aligned to notification-service HTTP endpoints.",
+                 "schema":  "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+             },
+    "item":  [
+                 {
+                     "name":  "Health",
+                     "item":  [
+                                  {
+                                      "name":  "GET /api/v1/health",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+
+                                                                 ],
+                                                      "url":  "{{baseUrl}}/api/v1/health"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "GET /api/v1/health/ready",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+
+                                                                 ],
+                                                      "url":  "{{baseUrl}}/api/v1/health/ready"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "GET /api/v1/health/live",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+
+                                                                 ],
+                                                      "url":  "{{baseUrl}}/api/v1/health/live"
+                                                  }
+                                  }
+                              ]
+                 },
+                 {
+                     "name":  "OTP APIs",
+                     "item":  [
+                                  {
+                                      "name":  "POST /api/v1/otp/send",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"userId\": \"{{userId}}\",\n  \"actorType\": \"{{actorType}}\",\n  \"destination\": \"{{otpDestination}}\",\n  \"channel\": \"{{otpChannel}}\",\n  \"code\": \"{{otpCode}}\",\n  \"ttlSeconds\": 300\n}"
+                                                               },
+                                                      "url":  "{{baseUrl}}/api/v1/otp/send"
+                                                  }
+                                  }
+                              ]
+                 }
+             ]
+}
+

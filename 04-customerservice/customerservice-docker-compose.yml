@@ -2,36 +2,19 @@ services:
 
 # --------- Customer Service ----------
 
-  customerservice_mongodb:
-    image: quay.io/mongodb/mongodb-community-server
-    container_name: customerservice_mongodb
-    env_file:
-      - ./.env
-    ports:
-      - "27017:27017"
-    volumes:
-      - customerservice_mongodb_data:/data/db
-    healthcheck:
-      test: ["CMD-SHELL", "mongosh --quiet --eval \"db.adminCommand({ ping: 1 })\""]
-      interval: 15s
-      timeout: 10s
-      retries: 10
-    networks:
-      - flight-booking-network
-
   customerservice_mongodb_init:
     image: quay.io/mongodb/mongodb-community-server
     container_name: customerservice_mongodb_init
     restart: "no"
     env_file:
-      - ./.env
+      - ./.env.mongodb.init
     command: >
       sh -ec "
-        until mongosh --host customerservice_mongodb --username \"$$MONGODB_INITDB_ROOT_USERNAME\" --password \"$$MONGODB_INITDB_ROOT_PASSWORD\" --authenticationDatabase admin --quiet --eval \"db.adminCommand({ ping: 1 })\"; do sleep 2; done;
-        mongosh --host customerservice_mongodb --username \"$$MONGODB_INITDB_ROOT_USERNAME\" --password \"$$MONGODB_INITDB_ROOT_PASSWORD\" --authenticationDatabase admin /init/init-customer-db.js
+        until mongosh --host platform_mongodb --username \"$$MONGODB_INITDB_ROOT_USERNAME\" --password \"$$MONGODB_INITDB_ROOT_PASSWORD\" --authenticationDatabase admin --quiet --eval \"db.adminCommand({ ping: 1 })\"; do sleep 2; done;
+        mongosh --host platform_mongodb --username \"$$MONGODB_INITDB_ROOT_USERNAME\" --password \"$$MONGODB_INITDB_ROOT_PASSWORD\" --authenticationDatabase admin /init/init-customer-db.js
       "
     depends_on:
-      customerservice_mongodb:
+      platform_mongodb:
         condition: service_healthy
     volumes:
       - ./db:/init:ro
@@ -55,7 +38,7 @@ services:
     depends_on:
       customerservice_mongodb_init:
         condition: service_completed_successfully
-      customerservice_mongodb:
+      platform_mongodb:
         condition: service_healthy
     networks:
       - flight-booking-network
@@ -66,8 +49,3 @@ networks:
   flight-booking-network:
     name: flight-booking-network
     driver: bridge
-
-# ----------  Volumes --------------
-
-volumes:
-  customerservice_mongodb_data:
