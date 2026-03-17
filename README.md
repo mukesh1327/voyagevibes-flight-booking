@@ -1,6 +1,6 @@
 # Voyage Vibes
 
-Polyglot flight-booking demo with Podman/Compose deployment units for gateway, auth, flight, booking, customer, and payment services.
+Polygot flight-booking demo with Podman/Compose deployment units for gateway, auth, flight, booking, customer, and payment services.
 
 ## Start the application
 
@@ -10,6 +10,7 @@ Compose-managed runtime variables now live in per-service dotenv files reference
 
 ```shell
 # use docker or podman
+COMPOSE_PARALLEL_RUN=1
 podman compose -f docker-compose.yml up -d
 ```
 
