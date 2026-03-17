@@ -16,7 +16,7 @@
         "type": "query",
         "datasource": "Prometheus",
         "refresh": 1,
-        "query": "label_values(http_server_duration_seconds_count, service_name)",
+        "query": "label_values({__name__=~\".+\"}, service_name)",
         "includeAll": true,
         "allValue": ".*",
         "multi": true,
@@ -33,7 +33,7 @@
         {
           "refId": "A",
           "datasource": "Prometheus",
-          "expr": "count(count by (service_name) (http_server_duration_seconds_count{service_name=~\"$service\"}))",
+          "expr": "count(count by (service_name) ({__name__=~\"http_server_.*(duration|requests).*\", service_name=~\"$service\"}))",
           "instant": true
         }
       ],
@@ -51,7 +51,7 @@
         {
           "refId": "A",
           "datasource": "Prometheus",
-          "expr": "sum by (service_name) (rate(http_server_duration_seconds_count{service_name=~\"$service\"}[5m]))",
+          "expr": "sum by (service_name) (rate({__name__=~\"http_server_.*duration.*_count\", service_name=~\"$service\"}[5m]))",
           "legendFormat": "{{service_name}}"
         }
       ],
@@ -69,7 +69,7 @@
         {
           "refId": "A",
           "datasource": "Prometheus",
-          "expr": "sum by (service_name) (rate(http_server_duration_seconds_count{service_name=~\"$service\", http_status_code=~\"5..\"}[5m]))",
+          "expr": "sum by (service_name) (rate({__name__=~\"http_server_.*duration.*_count\", service_name=~\"$service\", http_status_code=~\"5..\"}[5m])) + sum by (service_name) (rate({__name__=~\"http_server_.*duration.*_count\", service_name=~\"$service\", http_response_status_code=~\"5..\"}[5m]))",
           "legendFormat": "{{service_name}}"
         }
       ],
@@ -87,13 +87,19 @@
         {
           "refId": "A",
           "datasource": "Prometheus",
-          "expr": "histogram_quantile(0.95, sum by (le, service_name) (rate(http_server_duration_seconds_bucket{service_name=~\"$service\"}[5m])))",
-          "legendFormat": "{{service_name}}"
+          "expr": "histogram_quantile(0.95, sum by (le, service_name) (rate({__name__=~\"http_server_.*duration.*_(ms|milliseconds)_bucket\", service_name=~\"$service\"}[5m])))",
+          "legendFormat": "{{service_name}} (ms)"
+        },
+        {
+          "refId": "B",
+          "datasource": "Prometheus",
+          "expr": "histogram_quantile(0.95, sum by (le, service_name) (rate({__name__=~\"http_server_.*duration.*_seconds_bucket\", service_name=~\"$service\"}[5m]))) * 1000",
+          "legendFormat": "{{service_name}} (s->ms)"
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "s"
+          "unit": "ms"
         }
       }
     },
@@ -105,7 +111,7 @@
         {
           "refId": "A",
           "datasource": "Prometheus",
-          "expr": "sum by (service_name) (rate(process_cpu_time_seconds_total{service_name=~\"$service\"}[5m]))",
+          "expr": "sum by (service_name) (rate({__name__=~\"process_cpu_time.*\", service_name=~\"$service\"}[5m]))",
           "legendFormat": "{{service_name}}"
         }
       ],
@@ -123,7 +129,7 @@
         {
           "refId": "A",
           "datasource": "Prometheus",
-          "expr": "sum by (service_name) (process_resident_memory_bytes{service_name=~\"$service\"}) / 1024 / 1024",
+          "expr": "sum by (service_name) ({__name__=~\"process_.*memory.*_bytes\", service_name=~\"$service\"}) / 1024 / 1024",
           "legendFormat": "{{service_name}}"
         }
       ],
