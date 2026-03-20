@@ -9,3 +9,4 @@ export { flightService } from './flightService';
 export { bookingService } from './bookingService';
 export { paymentService } from './paymentService';
 export { userService } from './userService';
+export { notificationService } from './notificationService';

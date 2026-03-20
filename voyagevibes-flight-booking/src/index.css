@@ -1,87 +1,152 @@
 * {
-  margin: 0;
-  padding: 0;
   box-sizing: border-box;
 }
 
 :root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
-
-  color: #1f2937;
-  background-color: #ffffff;
-
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-body {
-  margin: 0;
-  min-width: 320px;
-  min-height: 100vh;
-  background: white;
-  color: #1f2937;
+  color-scheme: light;
+  font-family: "Segoe UI Variable", "Trebuchet MS", "Avenir Next", sans-serif;
 }
 
 html {
   scroll-behavior: smooth;
 }
 
-a {
-  font-weight: 500;
-  color: #0066cc;
-  text-decoration: inherit;
+html.dark {
+  color-scheme: dark;
 }
 
-a:hover {
-  color: #0052a3;
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at top left, rgba(96, 165, 250, 0.2), transparent 32%),
+    radial-gradient(circle at top right, rgba(99, 102, 241, 0.18), transparent 34%),
+    linear-gradient(180deg, #f8fbff 0%, #eef4ff 45%, #f8fafc 100%);
+  color: #0f172a;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
+html.dark body {
+  background:
+    radial-gradient(circle at top left, rgba(59, 130, 246, 0.18), transparent 34%),
+    radial-gradient(circle at top right, rgba(129, 140, 248, 0.16), transparent 36%),
+    linear-gradient(180deg, #020617 0%, #0f172a 45%, #020617 100%);
+  color: #e2e8f0;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
 }
 
 button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: #0066cc;
-  color: white;
   cursor: pointer;
-  transition: background-color 0.25s;
 }
 
-button:hover {
-  background-color: #0052a3;
+#root {
+  min-height: 100vh;
 }
 
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
+.mesh-background {
+  position: relative;
 }
 
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
+.mesh-background::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.18) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.18) 1px, transparent 1px);
+  background-size: 36px 36px;
+  mask-image: radial-gradient(circle at center, black 12%, transparent 82%);
+  opacity: 0.4;
+}
+
+html.dark .mesh-background::before {
+  background-image:
+    linear-gradient(rgba(148, 163, 184, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(148, 163, 184, 0.08) 1px, transparent 1px);
+}
+
+.glass-panel {
+  border-color: rgba(255, 255, 255, 0.6);
+}
+
+.hero-gradient {
+  background:
+    radial-gradient(circle at top left, rgba(125, 211, 252, 0.36), transparent 28%),
+    radial-gradient(circle at bottom right, rgba(129, 140, 248, 0.24), transparent 32%),
+    linear-gradient(135deg, #2563eb 0%, #4f46e5 52%, #1d4ed8 100%);
+}
+
+.fade-up {
+  animation: fade-up 420ms ease both;
+}
+
+.skeleton {
+  background: linear-gradient(90deg, rgba(226, 232, 240, 0.9), rgba(241, 245, 249, 1), rgba(226, 232, 240, 0.9));
+}
+
+html.dark .skeleton {
+  background: linear-gradient(90deg, rgba(30, 41, 59, 0.9), rgba(51, 65, 85, 1), rgba(30, 41, 59, 0.9));
+}
+
+.shimmer-effect {
+  background-size: 200% 100%;
+  animation: shimmer 1.4s linear infinite;
+}
+
+.ticket-panel {
+  background:
+    radial-gradient(circle at top right, rgba(96, 165, 250, 0.14), transparent 34%),
+    linear-gradient(180deg, rgba(248, 250, 252, 0.9), rgba(241, 245, 249, 0.95));
+}
+
+html.dark .ticket-panel {
+  background:
+    radial-gradient(circle at top right, rgba(59, 130, 246, 0.16), transparent 34%),
+    linear-gradient(180deg, rgba(15, 23, 42, 0.94), rgba(2, 6, 23, 0.96));
+}
+
+.qr-grid {
+  min-height: 180px;
+  background:
+    linear-gradient(90deg, rgba(15, 23, 42, 0.15) 10%, transparent 10%) 0 0 / 18px 18px,
+    linear-gradient(rgba(15, 23, 42, 0.15) 10%, transparent 10%) 0 0 / 18px 18px,
+    linear-gradient(135deg, rgba(37, 99, 235, 0.18), rgba(79, 70, 229, 0.18));
+}
+
+html.dark .qr-grid {
+  background:
+    linear-gradient(90deg, rgba(248, 250, 252, 0.16) 10%, transparent 10%) 0 0 / 18px 18px,
+    linear-gradient(rgba(248, 250, 252, 0.16) 10%, transparent 10%) 0 0 / 18px 18px,
+    linear-gradient(135deg, rgba(37, 99, 235, 0.18), rgba(79, 70, 229, 0.18));
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
   }
 
-  a:hover {
-    color: #0052a3;
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
   }
 
-  button {
-    background-color: #0066cc;
-  }
-
-  button:hover {
-    background-color: #0052a3;
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }

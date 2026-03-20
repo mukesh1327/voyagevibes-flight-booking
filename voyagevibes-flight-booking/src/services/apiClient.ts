@@ -14,7 +14,7 @@ interface ServiceConfig {
   baseUrl: string;
 }
 
-type ServiceKey = 'gateway' | 'auth' | 'flight' | 'booking' | 'customer' | 'payment';
+type ServiceKey = 'gateway' | 'auth' | 'flight' | 'booking' | 'customer' | 'payment' | 'notification';
 
 const DEFAULT_USER_ID = 'U-CUSTOMER-1';
 const DEFAULT_ACTOR_TYPE = 'customer';
@@ -30,7 +30,7 @@ const resolveEnv = (...keys: string[]): string | undefined => {
   return undefined;
 };
 
-const gatewayBaseUrl = resolveEnv('VITE_GATEWAY_API_URL', 'VITE_API_GATEWAY_BASE_URL') || '/gateway-api';
+export const gatewayBaseUrl = resolveEnv('VITE_GATEWAY_API_URL', 'VITE_API_GATEWAY_BASE_URL') || '/gateway-api';
 
 const resolveServiceConfig = (): Record<
   ServiceKey,
@@ -44,6 +44,7 @@ const resolveServiceConfig = (): Record<
   booking: { baseUrl: gatewayBaseUrl },
   customer: { baseUrl: gatewayBaseUrl },
   payment: { baseUrl: gatewayBaseUrl },
+  notification: { baseUrl: gatewayBaseUrl },
 });
 
 const serviceConfig = resolveServiceConfig();
