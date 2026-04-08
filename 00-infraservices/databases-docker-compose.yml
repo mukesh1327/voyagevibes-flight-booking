@@ -99,6 +99,23 @@ services:
     networks:
       - flight-booking-network
 
+# ================= Garage Standalone (Object Storage) ========================
+
+  garage-standalone:
+    image: dxflrs/garage:v2.1.0
+    container_name: garage-standalone
+    network_mode: "host"
+    volumes:
+      - ./configs/garage-standalone.toml:/etc/garage.toml:ro
+      - garage_meta:/var/lib/garage/meta
+      - garage_data:/var/lib/garage/data
+    environment:
+      - RUST_LOG=garage=info
+    restart: unless-stopped
+    networks:
+      - flight-booking-network
+
+
 # ================= Network ========================
 
 networks:
@@ -113,3 +130,5 @@ volumes:
   platform_mysql_data:
   platform_mssql_data:
   platform_mongodb_data:
+  garage_data:
+  garage_meta:

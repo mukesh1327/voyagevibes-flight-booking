@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject } from '@angular/core';
+import { Component, computed, inject } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 
 import { CorpAuthService } from '../core/services/corp-auth.service';
@@ -20,13 +20,13 @@ import { CorpWorkbenchStore } from '../core/state/corp-workbench.store';
               Ops cockpit
             </h1>
             <p class="mt-3 text-sm text-slate-300">
-              Corp agents manage search, hold, booking, confirmation, and payment transitions from one workspace.
+              Corp agents manage search, hold, booking, confirmation, payment, and user access controls from one workspace.
             </p>
           </a>
 
           <nav class="mt-10 space-y-2">
             <a
-              *ngFor="let item of navItems"
+              *ngFor="let item of navItems()"
               [routerLink]="item.link"
               routerLinkActive="bg-white text-slate-950 shadow-lg shadow-cyan-500/20"
               class="flex items-center justify-between rounded-2xl border border-white/8 px-4 py-3 text-sm font-medium text-slate-200 transition hover:border-cyan-300/40 hover:bg-white/5"
@@ -54,6 +54,10 @@ import { CorpWorkbenchStore } from '../core/state/corp-workbench.store';
               <div class="rounded-2xl bg-slate-900/60 p-3">
                 <p class="text-xs text-slate-400">Current payment</p>
                 <p class="mt-1 font-medium">{{ workbench.currentPayment()?.paymentId || 'No payment intent' }}</p>
+              </div>
+              <div *ngIf="hasAdminAccess()" class="rounded-2xl bg-slate-900/60 p-3">
+                <p class="text-xs text-slate-400">Admin target</p>
+                <p class="mt-1 font-medium">{{ workbench.currentAdminUser()?.userId || workbench.currentAdminUser()?.email || 'No user selected' }}</p>
               </div>
             </div>
           </section>
@@ -99,16 +103,26 @@ import { CorpWorkbenchStore } from '../core/state/corp-workbench.store';
 export class CorpShellComponent {
   protected readonly sessionService = inject(CorpSessionService);
   protected readonly workbench = inject(CorpWorkbenchStore);
+  protected readonly hasAdminAccess = computed(
+    () => this.sessionService.session()?.user?.roles?.includes('CORP_ADMIN') ?? false,
+  );
+  protected readonly navItems = computed(() => {
+    const items = [
+      { label: 'Dashboard', link: '/workspace/dashboard', hint: 'Overview' },
+      { label: 'Flight Desk', link: '/workspace/flights', hint: 'Search + quote' },
+      { label: 'Booking Desk', link: '/workspace/bookings', hint: 'Reserve + confirm' },
+      { label: 'Payment Desk', link: '/workspace/payments', hint: 'Intent + capture' },
+    ];
+
+    if (this.hasAdminAccess()) {
+      items.push({ label: 'Admin Desk', link: '/workspace/admin', hint: 'Users + access' });
+    }
+
+    return items;
+  });
 
   private readonly auth = inject(CorpAuthService);
   private readonly router = inject(Router);
-
-  protected readonly navItems = [
-    { label: 'Dashboard', link: '/workspace/dashboard', hint: 'Overview' },
-    { label: 'Flight Desk', link: '/workspace/flights', hint: 'Search + quote' },
-    { label: 'Booking Desk', link: '/workspace/bookings', hint: 'Reserve + confirm' },
-    { label: 'Payment Desk', link: '/workspace/payments', hint: 'Intent + capture' },
-  ];
 
   protected async logout(): Promise<void> {
     await this.auth.logout();

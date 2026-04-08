@@ -6,6 +6,7 @@ const { CustomerService } = require('../application/customerService');
 const { resolveContext } = require('./context');
 const { SyncStream } = require('../domain/syncEvent');
 const { init: initOtel, middleware: otelMiddleware } = require('../observability/otel');
+const { buildOpenApiSpec, renderSwaggerHtml } = require('./swagger');
 
 function withHandler(handler) {
   return async (req, res) => {
@@ -32,6 +33,14 @@ function createApp(options = {}) {
     new InMemoryEventLedgerRepository()
   );
   app.locals.customerService = service;
+
+  app.get('/api-docs.json', (req, res) => {
+    res.json(buildOpenApiSpec(req));
+  });
+
+  app.get('/api-docs', (req, res) => {
+    res.type('html').send(renderSwaggerHtml(buildOpenApiSpec(req)));
+  });
 
   app.get('/api/v1/health', withHandler(async (_req, res) => res.json(await service.health('health'))));
   app.get('/api/v1/health/live', withHandler(async (_req, res) => res.json(await service.health('live'))));
@@ -76,3 +85,4 @@ function createApp(options = {}) {
 }
 
 module.exports = { createApp };
+

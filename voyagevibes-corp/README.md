@@ -30,6 +30,40 @@ This app is aligned to the corp API surface documented in the root [README](../R
 7. Change or cancel from the booking desk
 8. Refund from the payment desk
 
+## UI Improvement Plan
+
+### 1. Authentication
+- Corp login and MFA as the entry flow
+- Clear session state, logout, and route protection
+
+### 2. Dashboard
+- Show active holds, pending confirmations, pending payment actions, and recent activity
+- Provide direct actions for flight search, booking lookup, and payment lookup
+
+### 3. Flight Search
+- Capture only required search inputs
+- Show availability and pricing quote actions
+- Allow hold creation from selected flight
+
+### 4. Booking Operations
+- Reserve booking from held inventory
+- Confirm booking after payment completion
+- Support booking lookup, change, and cancel
+
+### 5. Payment Operations
+- Create payment intent for a booking
+- Support authorize, capture, and refund actions
+- Show payment status with booking context
+
+### 6. Navigation
+- Keep main navigation limited to Dashboard, Flights, Bookings, and Payments
+- Keep workflow status visible on every screen
+
+### 7. UI Rules
+- Prioritize speed, clarity, and task completion
+- Show only business-required data and actions
+- Keep forms short and operational
+
 ## Clean Architecture Shape
 ```text
 src/app/

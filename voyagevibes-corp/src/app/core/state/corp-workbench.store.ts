@@ -2,6 +2,7 @@ import { Injectable, signal } from '@angular/core';
 
 import type {
   BookingRecord,
+  CorpAdminUserSnapshot,
   FlightCardModel,
   FlightSearchCriteria,
   InventoryHold,
@@ -25,6 +26,8 @@ export class CorpWorkbenchStore {
   readonly bookingList = signal<BookingRecord[]>([]);
   readonly currentBooking = signal<BookingRecord | null>(null);
   readonly currentPayment = signal<PaymentRecord | null>(null);
+  readonly adminUsers = signal<CorpAdminUserSnapshot[]>([]);
+  readonly currentAdminUser = signal<CorpAdminUserSnapshot | null>(null);
   readonly activityFeed = signal<string[]>([
     'Corp console initialized. Start with login, then search and operate on flights.',
   ]);
@@ -70,6 +73,30 @@ export class CorpWorkbenchStore {
     this.currentPayment.set(payment);
   }
 
+  setCurrentAdminUser(user: CorpAdminUserSnapshot | null): void {
+    this.currentAdminUser.set(user);
+  }
+
+  upsertAdminUser(user: CorpAdminUserSnapshot): void {
+    const next = [...this.adminUsers()];
+    const index = next.findIndex(
+      (item) =>
+        item.trackingKey === user.trackingKey ||
+        (!!user.userId && item.userId === user.userId) ||
+        (!!user.email && item.email.toLowerCase() === user.email.toLowerCase()),
+    );
+
+    if (index >= 0) {
+      next[index] = { ...next[index], ...user };
+      this.currentAdminUser.set(next[index]);
+    } else {
+      next.unshift(user);
+      this.currentAdminUser.set(user);
+    }
+
+    this.adminUsers.set(next);
+  }
+
   log(message: string): void {
     this.activityFeed.set([`${new Date().toLocaleTimeString('en-IN')} | ${message}`, ...this.activityFeed()].slice(0, 8));
   }
@@ -80,6 +107,8 @@ export class CorpWorkbenchStore {
     this.currentHold.set(null);
     this.currentBooking.set(null);
     this.currentPayment.set(null);
+    this.adminUsers.set([]);
+    this.currentAdminUser.set(null);
     this.activityFeed.set(['Workspace reset.']);
   }
 }

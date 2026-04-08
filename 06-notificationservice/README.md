@@ -21,6 +21,9 @@ go build -o out\notification-service.exe .\cmd\notificationservice
 
 By default the service starts on `https://notification.voyagevibes.in:8087` using the certs in `https-certs`. You can override this with `HTTPS_ENABLED`, `TLS_CERT_FILE`, `TLS_KEY_FILE`, or `HTTP_HOST` if needed.
 
+## Swagger UI
+Once the service is running, Swagger UI is available at `/swagger/` and the OpenAPI document is served from `/swagger/openapi.json`.
+
 ## Docker (Containerfile uses UBI9)
 The Containerfile expects a prebuilt binary at `out/notification-service`.
 ```bash

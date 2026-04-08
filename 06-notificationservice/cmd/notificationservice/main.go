@@ -17,10 +17,10 @@ import (
 
 	"notificationservice/internal/app"
 	"notificationservice/internal/config"
-	"notificationservice/internal/observability"
 	kafkainfra "notificationservice/internal/infra/kafka"
 	postgresinfra "notificationservice/internal/infra/postgres"
 	redisinfra "notificationservice/internal/infra/redis"
+	"notificationservice/internal/observability"
 	transporthttp "notificationservice/internal/transport/http"
 	transportkafka "notificationservice/internal/transport/kafka"
 )

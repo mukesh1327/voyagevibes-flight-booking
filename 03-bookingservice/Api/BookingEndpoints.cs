@@ -12,7 +12,8 @@ public static class BookingEndpoints
 
     public static IEndpointRouteBuilder MapBookingEndpoints(this IEndpointRouteBuilder endpoints)
     {
-        var group = endpoints.MapGroup("/api/v1/bookings");
+        var group = endpoints.MapGroup("/api/v1/bookings")
+            .WithTags("Bookings");
 
         group.MapPost("/reserve", (HttpRequest request, ReserveBookingRequest payload, BookingApplicationService service, IIdempotencyStore idempotencyStore, CancellationToken cancellationToken) =>
         {
@@ -31,7 +32,15 @@ public static class BookingEndpoints
                     payload,
                     RequestContext.CorrelationId(request),
                     cancellationToken));
-        });
+        })
+        .WithName("ReserveBooking")
+        .WithSummary("Reserve seats for a flight")
+        .WithDescription("Creates a booking in RESERVED state and places an inventory hold with the flight service.")
+        .Accepts<ReserveBookingRequest>("application/json")
+        .Produces<Booking>(StatusCodes.Status200OK)
+        .Produces<ErrorResponse>(StatusCodes.Status400BadRequest)
+        .Produces<ErrorResponse>(StatusCodes.Status409Conflict)
+        .WithRequestContextHeaders(includeIdempotencyHeaders: true);
 
         group.MapPost("/{bookingId}/confirm", (HttpRequest request, string bookingId, BookingApplicationService service, IIdempotencyStore idempotencyStore, CancellationToken cancellationToken) =>
         {
@@ -50,17 +59,37 @@ public static class BookingEndpoints
                     actorType,
                     RequestContext.CorrelationId(request),
                     cancellationToken));
-        });
+        })
+        .WithName("ConfirmBooking")
+        .WithSummary("Confirm a booking")
+        .WithDescription("Commits the existing inventory hold and marks the booking as CONFIRMED.")
+        .Produces<Booking>(StatusCodes.Status200OK)
+        .Produces<ErrorResponse>(StatusCodes.Status403Forbidden)
+        .Produces<ErrorResponse>(StatusCodes.Status404NotFound)
+        .Produces<ErrorResponse>(StatusCodes.Status409Conflict)
+        .WithRequestContextHeaders(includeIdempotencyHeaders: true);
 
         group.MapGet("/{bookingId}", (HttpRequest request, string bookingId, BookingApplicationService service) =>
         {
             return Execute(() => service.GetOne(bookingId, RequestContext.UserId(request), RequestContext.ActorType(request)));
-        });
+        })
+        .WithName("GetBooking")
+        .WithSummary("Get a booking by ID")
+        .WithDescription("Returns a single booking when the caller is allowed to access it.")
+        .Produces<Booking>(StatusCodes.Status200OK)
+        .Produces<ErrorResponse>(StatusCodes.Status403Forbidden)
+        .Produces<ErrorResponse>(StatusCodes.Status404NotFound)
+        .WithRequestContextHeaders();
 
         group.MapGet("", (HttpRequest request, BookingApplicationService service) =>
         {
             return Results.Ok(service.GetMany(RequestContext.UserId(request), RequestContext.ActorType(request)));
-        });
+        })
+        .WithName("ListBookings")
+        .WithSummary("List bookings for the caller")
+        .WithDescription("Returns all bookings for the current user, or every booking for corp actors.")
+        .Produces<BookingListResponse>(StatusCodes.Status200OK)
+        .WithRequestContextHeaders();
 
         group.MapPost("/{bookingId}/cancel", (HttpRequest request, string bookingId, BookingApplicationService service, IIdempotencyStore idempotencyStore, CancellationToken cancellationToken) =>
         {
@@ -79,7 +108,15 @@ public static class BookingEndpoints
                     actorType,
                     RequestContext.CorrelationId(request),
                     cancellationToken));
-        });
+        })
+        .WithName("CancelBooking")
+        .WithSummary("Cancel a booking")
+        .WithDescription("Releases the inventory hold and marks the booking as CANCELLED.")
+        .Produces<Booking>(StatusCodes.Status200OK)
+        .Produces<ErrorResponse>(StatusCodes.Status403Forbidden)
+        .Produces<ErrorResponse>(StatusCodes.Status404NotFound)
+        .Produces<ErrorResponse>(StatusCodes.Status409Conflict)
+        .WithRequestContextHeaders(includeIdempotencyHeaders: true);
 
         group.MapPost("/{bookingId}/change", (HttpRequest request, string bookingId, ChangeBookingRequest payload, BookingApplicationService service, IIdempotencyStore idempotencyStore, CancellationToken cancellationToken) =>
         {
@@ -99,7 +136,17 @@ public static class BookingEndpoints
                     payload,
                     RequestContext.CorrelationId(request),
                     cancellationToken));
-        });
+        })
+        .WithName("ChangeBooking")
+        .WithSummary("Change an existing booking")
+        .WithDescription("Releases the current hold, creates a replacement hold, and marks the booking as CHANGED.")
+        .Accepts<ChangeBookingRequest>("application/json")
+        .Produces<Booking>(StatusCodes.Status200OK)
+        .Produces<ErrorResponse>(StatusCodes.Status400BadRequest)
+        .Produces<ErrorResponse>(StatusCodes.Status403Forbidden)
+        .Produces<ErrorResponse>(StatusCodes.Status404NotFound)
+        .Produces<ErrorResponse>(StatusCodes.Status409Conflict)
+        .WithRequestContextHeaders(includeIdempotencyHeaders: true);
 
         return endpoints;
     }
@@ -222,7 +269,7 @@ public static class BookingEndpoints
     }
 
     private static IResult Error(int status, string code, string message)
-        => Results.Json(new { code, message }, statusCode: status);
+        => Results.Json(new ErrorResponse(code, message), statusCode: status);
 
     private static string? GetIdempotencyKey(HttpRequest request)
     {

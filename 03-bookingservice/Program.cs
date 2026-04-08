@@ -10,6 +10,7 @@ using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
+using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -29,6 +30,16 @@ if (IsOtelEnabled())
 builder.Services.Configure<BookingServiceOptions>(builder.Configuration.GetSection("BookingService"));
 builder.Services.Configure<FlightServiceOptions>(builder.Configuration.GetSection("ExternalServices:Flight"));
 builder.Services.Configure<KafkaOptions>(builder.Configuration.GetSection("Kafka"));
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen(options =>
+{
+    options.SwaggerDoc("v1", new OpenApiInfo
+    {
+        Title = "Booking Service API",
+        Version = "v1",
+        Description = "HTTP API for booking lifecycle operations and service health checks."
+    });
+});
 
 var bookingDbConnectionString = builder.Configuration.GetConnectionString("BookingDb");
 if (string.IsNullOrWhiteSpace(bookingDbConnectionString))
@@ -87,6 +98,13 @@ builder.WebHost.ConfigureKestrel(options =>
 });
 
 var app = builder.Build();
+
+app.UseSwagger();
+app.UseSwaggerUI(options =>
+{
+    options.SwaggerEndpoint("/swagger/v1/swagger.json", "Booking Service API v1");
+    options.DocumentTitle = "Booking Service Swagger";
+});
 
 app.MapHealthEndpoints();
 app.MapBookingEndpoints();

@@ -1,8 +1,16 @@
 package com.cloudxplorer.authservice.api.controller;
 
+import com.cloudxplorer.authservice.api.PublicAuthApi;
 import com.cloudxplorer.authservice.api.dto.health.HealthResponse;
 import com.cloudxplorer.authservice.infrastructure.config.AuthServiceProperties;
 import com.cloudxplorer.authservice.infrastructure.health.DependencyHealthChecker;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.ExampleObject;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -14,6 +22,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/health")
+@Tag(name = "Health", description = "Liveness and readiness endpoints for authservice and its dependencies.")
 public class HealthController {
 
     private final AuthServiceProperties properties;
@@ -24,16 +33,70 @@ public class HealthController {
         this.dependencyHealthChecker = dependencyHealthChecker;
     }
 
+    @Operation(summary = "Dependency-aware health", description = "Reports service health and validates both Keycloak and database connectivity.")
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "Service and dependencies are healthy",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = HealthResponse.class),
+                examples = @ExampleObject(value = PublicAuthApi.OpenApiExamples.HEALTH_RESPONSE)
+            )
+        ),
+        @ApiResponse(
+            responseCode = "503",
+            description = "One or more dependencies are unavailable",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = HealthResponse.class),
+                examples = @ExampleObject(value = PublicAuthApi.OpenApiExamples.HEALTH_RESPONSE)
+            )
+        )
+    })
     @GetMapping
     public ResponseEntity<HealthResponse> health() {
         return buildDependencyAwareHealth("health");
     }
 
+    @Operation(summary = "Readiness probe", description = "Reports readiness and validates external dependencies before traffic should be routed to the service.")
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "Service is ready",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = HealthResponse.class),
+                examples = @ExampleObject(value = PublicAuthApi.OpenApiExamples.HEALTH_RESPONSE)
+            )
+        ),
+        @ApiResponse(
+            responseCode = "503",
+            description = "Service is not ready",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = HealthResponse.class),
+                examples = @ExampleObject(value = PublicAuthApi.OpenApiExamples.HEALTH_RESPONSE)
+            )
+        )
+    })
     @GetMapping("/ready")
     public ResponseEntity<HealthResponse> readiness() {
         return buildDependencyAwareHealth("readiness");
     }
 
+    @Operation(summary = "Liveness probe", description = "Returns process liveness without dependency checks.")
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "Service process is live",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = HealthResponse.class),
+                examples = @ExampleObject(value = PublicAuthApi.OpenApiExamples.HEALTH_RESPONSE)
+            )
+        )
+    })
     @GetMapping("/live")
     public ResponseEntity<HealthResponse> liveness() {
         return ResponseEntity.ok(buildResponse("UP", "liveness"));

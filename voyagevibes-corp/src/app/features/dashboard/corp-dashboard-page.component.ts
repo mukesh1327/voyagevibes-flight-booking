@@ -17,11 +17,11 @@ import { CorpWorkbenchStore } from '../../core/state/corp-workbench.store';
           <div>
             <p class="text-xs uppercase tracking-[0.3em] text-cyan-300">Ops overview</p>
             <h1 class="mt-3 font-['Space_Grotesk','Segoe_UI',sans-serif] text-4xl font-semibold">
-              Corp routing, business workflows, and payment actions in one desk.
+              Corp workflows aligned to booking, payment, and admin controls.
             </h1>
             <p class="mt-4 max-w-3xl text-sm leading-7 text-slate-300">
-              This workspace is aligned with the root README: corp auth with MFA, flight shopping and inventory,
-              booking orchestration, and payment lifecycle management.
+              This workspace stays focused on the business path: corp auth with MFA, flight shopping and inventory,
+              booking orchestration, payment lifecycle management, and admin actions for workforce access.
             </p>
           </div>
           <div class="grid gap-4 sm:grid-cols-2">
@@ -39,7 +39,7 @@ import { CorpWorkbenchStore } from '../../core/state/corp-workbench.store';
         </div>
       </div>
 
-      <div class="grid gap-5 xl:grid-cols-4">
+      <div class="grid gap-5 md:grid-cols-2 xl:grid-cols-5">
         <article *ngFor="let card of kpiCards()" class="rounded-[1.75rem] border border-slate-200 bg-white p-6 shadow-sm">
           <p class="text-xs uppercase tracking-[0.24em] text-slate-400">{{ card.label }}</p>
           <p class="mt-3 text-3xl font-semibold text-slate-900">{{ card.value }}</p>
@@ -54,7 +54,7 @@ import { CorpWorkbenchStore } from '../../core/state/corp-workbench.store';
             <h2 class="mt-2 font-['Space_Grotesk','Segoe_UI',sans-serif] text-2xl font-semibold text-slate-900">Next actions</h2>
           </div>
 
-          <div class="mt-6 grid gap-4 md:grid-cols-3">
+          <div class="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             <a routerLink="/workspace/flights" class="rounded-3xl border border-slate-200 bg-slate-50 p-5 transition hover:-translate-y-0.5 hover:shadow-lg">
               <p class="text-sm font-semibold text-slate-900">Search and quote</p>
               <p class="mt-2 text-sm text-slate-500">Search corp fares, inspect availability, and hold inventory.</p>
@@ -66,6 +66,10 @@ import { CorpWorkbenchStore } from '../../core/state/corp-workbench.store';
             <a routerLink="/workspace/payments" class="rounded-3xl border border-slate-200 bg-slate-50 p-5 transition hover:-translate-y-0.5 hover:shadow-lg">
               <p class="text-sm font-semibold text-slate-900">Move payment state</p>
               <p class="mt-2 text-sm text-slate-500">Create intent, authorize, capture, or refund against the active booking.</p>
+            </a>
+            <a *ngIf="hasAdminAccess()" routerLink="/workspace/admin" class="rounded-3xl border border-slate-200 bg-slate-50 p-5 transition hover:-translate-y-0.5 hover:shadow-lg">
+              <p class="text-sm font-semibold text-slate-900">Admin controls</p>
+              <p class="mt-2 text-sm text-slate-500">Create corp users, assign roles, and enforce MFA or session controls.</p>
             </a>
           </div>
         </section>
@@ -87,6 +91,9 @@ import { CorpWorkbenchStore } from '../../core/state/corp-workbench.store';
 export class CorpDashboardPageComponent {
   protected readonly session = inject(CorpSessionService);
   protected readonly workbench = inject(CorpWorkbenchStore);
+  protected readonly hasAdminAccess = computed(
+    () => this.session.session()?.user?.roles?.includes('CORP_ADMIN') ?? false,
+  );
 
   private readonly bookingOps = inject(BookingOpsService);
 
@@ -96,13 +103,30 @@ export class CorpDashboardPageComponent {
     const pendingPayments = bookings.filter((item) => item.paymentStatus !== 'CAPTURED').length;
     const currentHold = this.workbench.currentHold();
     const quote = this.workbench.currentQuote();
-
-    return [
+    const cards = [
       { label: 'Active bookings', value: activeBookings, caption: 'Visible to corp actor across customers.' },
       { label: 'Pending payments', value: pendingPayments, caption: 'Bookings still waiting for payment completion.' },
-      { label: 'Current hold', value: currentHold?.holdId || 'None', caption: currentHold ? `Expires ${new Date(currentHold.expiresAt).toLocaleTimeString('en-IN')}` : 'No hold has been created yet.' },
-      { label: 'Last quote', value: quote ? `INR ${Math.round(quote.pricing.totalPrice).toLocaleString('en-IN')}` : 'Not quoted', caption: quote ? `Valid until ${new Date(quote.validUntil).toLocaleTimeString('en-IN')}` : 'Request a quote from the flight desk.' },
+      {
+        label: 'Current hold',
+        value: currentHold?.holdId || 'None',
+        caption: currentHold ? `Expires ${new Date(currentHold.expiresAt).toLocaleTimeString('en-IN')}` : 'No hold has been created yet.',
+      },
+      {
+        label: 'Last quote',
+        value: quote ? `INR ${Math.round(quote.pricing.totalPrice).toLocaleString('en-IN')}` : 'Not quoted',
+        caption: quote ? `Valid until ${new Date(quote.validUntil).toLocaleTimeString('en-IN')}` : 'Request a quote from the flight desk.',
+      },
     ];
+
+    if (this.hasAdminAccess()) {
+      cards.push({
+        label: 'Admin actions',
+        value: this.workbench.adminUsers().length,
+        caption: 'Locally tracked corp user actions sent to the auth-service admin APIs.',
+      });
+    }
+
+    return cards;
   });
 
   constructor() {

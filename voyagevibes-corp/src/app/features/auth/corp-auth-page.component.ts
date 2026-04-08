@@ -12,38 +12,20 @@ import { CorpAuthService } from '../../core/services/corp-auth.service';
   imports: [CommonModule, FormsModule],
   template: `
     <div class="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(34,211,238,0.18),_transparent_28%),radial-gradient(circle_at_bottom_right,_rgba(59,130,246,0.22),_transparent_32%),linear-gradient(135deg,_#040814,_#0f172a_55%,_#0a1c37)] px-5 py-8 text-white md:px-10">
-      <div class="mx-auto grid min-h-[calc(100vh-4rem)] max-w-7xl gap-8 lg:grid-cols-[1.15fr_0.85fr]">
-        <section class="rounded-[2rem] border border-white/10 bg-white/6 p-8 backdrop-blur xl:p-12">
-          <p class="text-xs uppercase tracking-[0.35em] text-cyan-300">Corp operations portal</p>
-          <h1 class="mt-4 font-['Space_Grotesk','Segoe_UI',sans-serif] text-5xl font-semibold leading-none text-white">
-            Workforce control for the airline desk.
-          </h1>
-          <p class="mt-5 max-w-2xl text-base leading-7 text-slate-300">
-            This Angular app follows a clean split between core API services, operational state, and feature screens.
-            The corp route surface is aligned with the Kong and README plan: auth, flights, bookings, and payments.
-          </p>
-
-          <div class="mt-10 grid gap-4 md:grid-cols-3">
-            <article class="rounded-3xl border border-cyan-300/20 bg-cyan-400/10 p-5">
-              <p class="text-sm font-semibold text-cyan-100">1. Corp login + MFA</p>
-              <p class="mt-2 text-sm text-slate-300">Use /api/v1/auth/corp/login/* with factor and challenge orchestration.</p>
-            </article>
-            <article class="rounded-3xl border border-emerald-300/20 bg-emerald-400/10 p-5">
-              <p class="text-sm font-semibold text-emerald-100">2. Search + hold</p>
-              <p class="mt-2 text-sm text-slate-300">Quote and manage inventory from the flight desk before creating bookings.</p>
-            </article>
-            <article class="rounded-3xl border border-amber-300/20 bg-amber-400/10 p-5">
-              <p class="text-sm font-semibold text-amber-100">3. Reserve + pay + confirm</p>
-              <p class="mt-2 text-sm text-slate-300">Operators can move a booking from hold through payment capture and confirmation.</p>
-            </article>
+      <div class="mx-auto flex min-h-[calc(100vh-4rem)] max-w-xl items-center">
+        <section class="w-full rounded-[2rem] border border-white/10 bg-slate-950/55 p-8 backdrop-blur xl:p-10">
+          <div class="text-center">
+            <p class="text-xs uppercase tracking-[0.35em] text-cyan-300">VoyageVibes Corp</p>
+            <h1 class="mt-4 font-['Space_Grotesk','Segoe_UI',sans-serif] text-4xl font-semibold text-white">
+              Sign in
+            </h1>
+            <p class="mt-3 text-sm text-slate-300">Use your corporate account to continue.</p>
           </div>
-        </section>
 
-        <section class="rounded-[2rem] border border-white/10 bg-slate-950/55 p-8 backdrop-blur xl:p-10">
-          <div class="flex items-center justify-between">
+          <div class="mt-8 flex items-center justify-between">
             <div>
               <p class="text-xs uppercase tracking-[0.25em] text-slate-400">Secure access</p>
-              <h2 class="mt-2 font-['Space_Grotesk','Segoe_UI',sans-serif] text-3xl font-semibold">Corp sign in</h2>
+              <h2 class="mt-2 font-['Space_Grotesk','Segoe_UI',sans-serif] text-2xl font-semibold">Corp account</h2>
             </div>
             <span class="rounded-full border border-cyan-300/25 bg-cyan-400/10 px-3 py-1 text-xs font-medium text-cyan-100">
               {{ stepLabel() }}
@@ -74,18 +56,9 @@ import { CorpAuthService } from '../../core/services/corp-auth.service';
                   required
                 />
               </label>
-              <p class="text-xs text-slate-400">We will start your login and verify your password in one step.</p>
             </div>
 
             <div *ngIf="step() === 'verify'" class="space-y-4">
-              <div class="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-slate-300">
-                Login flow <span class="font-medium text-white">{{ loginFlowId() }}</span> is active.
-              </div>
-
-              <div class="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-slate-300">
-                Primary factor: <span class="font-medium text-white">{{ factorType }}</span>
-              </div>
-
               <ng-container *ngIf="factorType === 'PASSWORD'; else advancedPrimary">
                 <label class="block">
                   <span class="mb-2 block text-sm text-slate-300">Password</span>
@@ -100,11 +73,8 @@ import { CorpAuthService } from '../../core/services/corp-auth.service';
                 </label>
               </ng-container>
               <ng-template #advancedPrimary>
-                <div class="rounded-2xl border border-amber-300/20 bg-amber-400/10 p-4 text-sm text-amber-100">
-                  This account requires a passkey assertion. Use advanced mode to paste the assertion string.
-                </div>
                 <label class="block">
-                  <span class="mb-2 block text-sm text-slate-300">Passkey assertion (advanced)</span>
+                  <span class="mb-2 block text-sm text-slate-300">Passkey assertion</span>
                   <textarea
                     [(ngModel)]="primaryAssertion"
                     name="primaryAssertion"
@@ -117,10 +87,6 @@ import { CorpAuthService } from '../../core/services/corp-auth.service';
             </div>
 
             <div *ngIf="step() === 'challenge'" class="space-y-4">
-              <div class="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-slate-300">
-                MFA factor: <span class="font-medium text-white">{{ mfaFactor }}</span>
-              </div>
-
               <div *ngIf="challengePreview()" class="rounded-2xl border border-cyan-300/20 bg-cyan-400/10 p-4 text-sm text-cyan-50">
                 {{ challengePreview() }}
               </div>
@@ -138,11 +104,8 @@ import { CorpAuthService } from '../../core/services/corp-auth.service';
                 </label>
               </ng-container>
               <ng-template #advancedMfa>
-                <div class="rounded-2xl border border-amber-300/20 bg-amber-400/10 p-4 text-sm text-amber-100">
-                  This account requires a passkey assertion for MFA. Use advanced mode to paste the assertion string.
-                </div>
                 <label class="block">
-                  <span class="mb-2 block text-sm text-slate-300">MFA assertion (advanced)</span>
+                  <span class="mb-2 block text-sm text-slate-300">MFA assertion</span>
                   <input
                     [(ngModel)]="challengeAnswer"
                     name="challengeAnswer"
@@ -197,22 +160,22 @@ export class CorpAuthPageComponent {
   protected stepLabel(): string {
     switch (this.step()) {
       case 'verify':
-        return 'Primary factor';
+        return 'Verify';
       case 'challenge':
-        return 'MFA challenge';
+        return 'Security check';
       default:
-        return 'Identity bootstrap';
+        return 'Sign in';
     }
   }
 
   protected actionLabel(): string {
     switch (this.step()) {
       case 'verify':
-        return 'Verify primary factor';
+        return 'Verify';
       case 'challenge':
-        return 'Verify MFA and enter workspace';
+        return 'Continue';
       default:
-        return 'Start corp login';
+        return 'Sign in';
     }
   }
 

@@ -98,9 +98,9 @@
       "enabled": true,
       "protocol": "openid-connect",
       "publicClient": false,
-      "secret": "secret",
+      "secret": "CorpWebSecret123$",
       "standardFlowEnabled": true,
-      "directAccessGrantsEnabled": false,
+      "directAccessGrantsEnabled": true,
       "serviceAccountsEnabled": false,
       "redirectUris": [
         "https://corp-ui.voyagevibes.in:8086/corp/auth/callback",
@@ -199,6 +199,50 @@
       "serviceAccountsEnabled": true,
       "standardFlowEnabled": false,
       "directAccessGrantsEnabled": false
+    }
+  ],
+  "users": [
+    {
+      "username": "admin@airline.com",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Ava",
+      "lastName": "Admin",
+      "email": "admin@airline.com",
+      "groups": [
+        "/admin"
+      ],
+      "realmRoles": [
+        "CORP_ADMIN"
+      ],
+      "credentials": [
+        {
+          "type": "password",
+          "value": "Corp@123$",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "username": "staff@airline.com",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Riya",
+      "lastName": "Staff",
+      "email": "staff@airline.com",
+      "groups": [
+        "/ops"
+      ],
+      "realmRoles": [
+        "OPS_AGENT"
+      ],
+      "credentials": [
+        {
+          "type": "password",
+          "value": "Corp@123$",
+          "temporary": false
+        }
+      ]
     }
   ]
 }

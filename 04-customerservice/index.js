@@ -134,8 +134,10 @@ async function listen(servers, config) {
   })));
 
   console.log(`customer-service http listening on http://${config.publicHost}:${config.httpPort}`);
+  console.log(`customer-service http api docs: http://${config.publicHost}:${config.httpPort}/api-docs`);
   if (config.sslEnabled) {
     console.log(`customer-service https listening on https://${config.publicHost}:${config.httpsPort}`);
+    console.log(`customer-service https api docs: https://${config.publicHost}:${config.httpsPort}/api-docs`);
     console.log(`customer-service tls certs loaded from: ${path.dirname(config.certPath)}`);
   }
 }
@@ -309,3 +311,4 @@ bootstrap().catch((error) => {
   console.error(error.message);
   process.exit(1);
 });
+

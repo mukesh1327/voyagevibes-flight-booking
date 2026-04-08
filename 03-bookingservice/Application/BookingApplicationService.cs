@@ -269,25 +269,21 @@ public class BookingApplicationService
         return Task.CompletedTask;
     }
 
-    public object Health(string mode)
+    public HealthResponse Health(string mode)
     {
-        return new
-        {
-            status = "UP",
-            details = new
-            {
-                mode,
-                service = "booking-service",
-                storage = _repository.StorageName,
-                activeEnv = _serviceOptions.ActiveEnv,
-                publishedBookingEvents = _kafkaMetrics.PublishedBookingEvents,
-                failedBookingPublishes = _kafkaMetrics.FailedBookingPublishes,
-                consumedInventoryEvents = _kafkaMetrics.ConsumedInventoryEvents,
-                failedInventoryEvents = _kafkaMetrics.FailedInventoryEvents,
-                consumedPaymentEvents = _kafkaMetrics.ConsumedPaymentEvents,
-                failedPaymentEvents = _kafkaMetrics.FailedPaymentEvents
-            }
-        };
+        return new HealthResponse(
+            Status: "UP",
+            Details: new HealthDetailsResponse(
+                Mode: mode,
+                Service: "booking-service",
+                Storage: _repository.StorageName,
+                ActiveEnv: _serviceOptions.ActiveEnv,
+                PublishedBookingEvents: _kafkaMetrics.PublishedBookingEvents,
+                FailedBookingPublishes: _kafkaMetrics.FailedBookingPublishes,
+                ConsumedInventoryEvents: _kafkaMetrics.ConsumedInventoryEvents,
+                FailedInventoryEvents: _kafkaMetrics.FailedInventoryEvents,
+                ConsumedPaymentEvents: _kafkaMetrics.ConsumedPaymentEvents,
+                FailedPaymentEvents: _kafkaMetrics.FailedPaymentEvents));
     }
 
     private Booking GetAuthorizedBooking(string bookingId, string userId, ActorType actorType)
@@ -372,3 +368,4 @@ public class BookingApplicationService
 
     private static string BuildBookingId() => $"BKG-{Guid.NewGuid():N}"[..16].ToUpperInvariant();
 }
+

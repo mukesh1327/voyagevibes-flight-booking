@@ -212,3 +212,35 @@ export interface CorpSession {
   mfaLevel: string;
   profileStatus: string;
 }
+
+export type CorpRoleId = 'CORP_ADMIN' | 'OPS_AGENT' | 'SUPPORT_AGENT' | 'FINANCE_AGENT';
+export type CorpUserStatus = 'ACTIVE' | 'DISABLED';
+
+export interface CorpUserCreateRequest {
+  email: string;
+  roleIds: CorpRoleId[];
+  department?: string;
+  managerId?: string;
+}
+
+export interface CorpUserUpdateRequest {
+  status?: CorpUserStatus;
+  department?: string;
+  managerId?: string;
+}
+
+export interface CorpRoleAssignmentRequest {
+  roleId: CorpRoleId;
+}
+
+export interface CorpAdminUserSnapshot {
+  trackingKey: string;
+  userId?: string;
+  email: string;
+  status: CorpUserStatus;
+  roles: CorpRoleId[];
+  department?: string;
+  managerId?: string;
+  updatedAt: string;
+  lastAction: string;
+}

@@ -13,6 +13,10 @@
 - `POST /api/v1/bookings/{bookingId}/cancel`
 - `POST /api/v1/bookings/{bookingId}/change`
 
+## Swagger
+- Swagger UI: `/swagger`
+- OpenAPI JSON: `/swagger/v1/swagger.json`
+
 ## Auth/Actor Alignment
 Aligned with auth/flight actor semantics:
 - `X-Actor-Type`: `customer` or `corp`

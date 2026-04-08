@@ -24,7 +24,7 @@ services:
       - ./observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
       - prometheus_data:/prometheus
     ports:
-      - "9090:9090"
+      - "9091:9090"
     networks:
       - flight-booking-network
 

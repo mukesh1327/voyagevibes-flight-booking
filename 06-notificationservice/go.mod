@@ -17,7 +17,6 @@ require (
 	go.opentelemetry.io/otel/sdk v1.26.0
 	go.opentelemetry.io/otel/sdk/log v1.26.0
 	go.opentelemetry.io/otel/sdk/metric v1.26.0
-	go.opentelemetry.io/otel/semconv/v1.26.0 v1.26.0
 )
 
 require (
@@ -32,3 +31,4 @@ require (
 	golang.org/x/sync v0.1.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
 )
+

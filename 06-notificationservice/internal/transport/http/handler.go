@@ -32,19 +32,20 @@ func NewHandler(deps HandlerDeps) http.Handler {
 	}
 
 	mux := http.NewServeMux()
+	registerSwaggerRoutes(mux)
 
 	mux.HandleFunc("/api/v1/health", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
 			w.WriteHeader(http.StatusMethodNotAllowed)
 			return
 		}
-		writeJSON(w, http.StatusOK, map[string]any{
-			"status": "UP",
-			"details": map[string]any{
-				"service":  deps.Health.Service,
-				"redis":    redisStatus,
-				"postgres": deps.Health.PostgresEnabled,
-				"kafka":    deps.Health.KafkaEnabled,
+		writeJSON(w, http.StatusOK, HealthResponse{
+			Status: "UP",
+			Details: &HealthDetails{
+				Service:  deps.Health.Service,
+				Redis:    redisStatus,
+				Postgres: deps.Health.PostgresEnabled,
+				Kafka:    deps.Health.KafkaEnabled,
 			},
 		})
 	})
@@ -54,7 +55,7 @@ func NewHandler(deps HandlerDeps) http.Handler {
 			w.WriteHeader(http.StatusMethodNotAllowed)
 			return
 		}
-		writeJSON(w, http.StatusOK, map[string]any{"status": "UP"})
+		writeJSON(w, http.StatusOK, StatusResponse{Status: "UP"})
 	})
 
 	mux.HandleFunc("/api/v1/health/ready", func(w http.ResponseWriter, r *http.Request) {
@@ -62,7 +63,7 @@ func NewHandler(deps HandlerDeps) http.Handler {
 			w.WriteHeader(http.StatusMethodNotAllowed)
 			return
 		}
-		writeJSON(w, http.StatusOK, map[string]any{"status": "UP"})
+		writeJSON(w, http.StatusOK, StatusResponse{Status: "UP"})
 	})
 
 	mux.HandleFunc("/api/v1/otp/send", func(w http.ResponseWriter, r *http.Request) {
@@ -71,20 +72,13 @@ func NewHandler(deps HandlerDeps) http.Handler {
 			return
 		}
 
-		var payload struct {
-			UserID      string `json:"userId"`
-			ActorType   string `json:"actorType"`
-			Destination string `json:"destination"`
-			Channel     string `json:"channel"`
-			Code        string `json:"code"`
-			TtlSeconds  int    `json:"ttlSeconds"`
-		}
+		var payload SendOtpRequest
 		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
-			writeJSON(w, http.StatusBadRequest, map[string]any{"code": "BAD_REQUEST", "message": "invalid json"})
+			writeJSON(w, http.StatusBadRequest, ErrorResponse{Code: "BAD_REQUEST", Message: "invalid json"})
 			return
 		}
 		if payload.UserID == "" || payload.Code == "" || payload.Destination == "" {
-			writeJSON(w, http.StatusBadRequest, map[string]any{"code": "BAD_REQUEST", "message": "userId, destination, code are required"})
+			writeJSON(w, http.StatusBadRequest, ErrorResponse{Code: "BAD_REQUEST", Message: "userId, destination, code are required"})
 			return
 		}
 
@@ -107,30 +101,30 @@ func NewHandler(deps HandlerDeps) http.Handler {
 		}, r.Header.Get("X-Correlation-Id"))
 		if err == nil {
 			if result.Deduped {
-				writeJSON(w, http.StatusOK, map[string]any{"accepted": true, "deduped": true})
+				writeJSON(w, http.StatusOK, SendOtpAcceptedResponse{Accepted: true, Deduped: true})
 				return
 			}
-			writeJSON(w, http.StatusOK, map[string]any{"accepted": true, "notificationId": result.NotificationID})
+			writeJSON(w, http.StatusOK, SendOtpAcceptedResponse{Accepted: true, NotificationID: result.NotificationID})
 			return
 		}
 
 		if errors.Is(err, app.ErrThrottled) {
-			writeJSON(w, http.StatusTooManyRequests, map[string]any{"code": "THROTTLED", "message": "too many requests"})
+			writeJSON(w, http.StatusTooManyRequests, ErrorResponse{Code: "THROTTLED", Message: "too many requests"})
 			return
 		}
 
 		if errors.Is(err, app.ErrPublishFailed) {
-			writeJSON(w, http.StatusBadGateway, map[string]any{"code": "KAFKA_ERROR", "message": "failed to publish notification"})
+			writeJSON(w, http.StatusBadGateway, ErrorResponse{Code: "KAFKA_ERROR", Message: "failed to publish notification"})
 			return
 		}
 
-		writeJSON(w, http.StatusInternalServerError, map[string]any{"code": "INTERNAL_ERROR", "message": "internal server error"})
+		writeJSON(w, http.StatusInternalServerError, ErrorResponse{Code: "INTERNAL_ERROR", Message: "internal server error"})
 	})
 
 	return mux
 }
 
-func writeJSON(w http.ResponseWriter, status int, payload map[string]any) {
+func writeJSON(w http.ResponseWriter, status int, payload any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	_ = json.NewEncoder(w).Encode(payload)

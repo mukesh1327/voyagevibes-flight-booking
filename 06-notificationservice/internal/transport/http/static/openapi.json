@@ -1,0 +1,338 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Notification Service API",
+    "version": "1.0.0",
+    "description": "HTTP APIs exposed by the notification-service."
+  },
+  "tags": [
+    {
+      "name": "Health",
+      "description": "Service availability endpoints."
+    },
+    {
+      "name": "OTP",
+      "description": "OTP notification APIs."
+    }
+  ],
+  "paths": {
+    "/api/v1/health": {
+      "get": {
+        "tags": [
+          "Health"
+        ],
+        "summary": "Get service health details",
+        "operationId": "getHealth",
+        "responses": {
+          "200": {
+            "description": "Service health information",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Method not allowed"
+          }
+        }
+      }
+    },
+    "/api/v1/health/live": {
+      "get": {
+        "tags": [
+          "Health"
+        ],
+        "summary": "Liveness probe",
+        "operationId": "getLiveHealth",
+        "responses": {
+          "200": {
+            "description": "Service is alive",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatusResponse"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Method not allowed"
+          }
+        }
+      }
+    },
+    "/api/v1/health/ready": {
+      "get": {
+        "tags": [
+          "Health"
+        ],
+        "summary": "Readiness probe",
+        "operationId": "getReadyHealth",
+        "responses": {
+          "200": {
+            "description": "Service is ready",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatusResponse"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Method not allowed"
+          }
+        }
+      }
+    },
+    "/api/v1/otp/send": {
+      "post": {
+        "tags": [
+          "OTP"
+        ],
+        "summary": "Send an OTP notification",
+        "operationId": "sendOtp",
+        "parameters": [
+          {
+            "name": "X-Correlation-Id",
+            "in": "header",
+            "description": "Optional correlation ID forwarded to downstream events.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SendOtpRequest"
+              },
+              "example": {
+                "userId": "USR-1001",
+                "actorType": "traveler",
+                "destination": "+919999999999",
+                "channel": "sms",
+                "code": "482193",
+                "ttlSeconds": 300
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OTP notification accepted or deduplicated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/SendOtpAcceptedResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/SendOtpDedupedResponse"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request payload",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Request throttled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Notification publishing failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Method not allowed"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "HealthResponse": {
+        "type": "object",
+        "required": [
+          "status",
+          "details"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "example": "UP"
+          },
+          "details": {
+            "$ref": "#/components/schemas/HealthDetails"
+          }
+        }
+      },
+      "HealthDetails": {
+        "type": "object",
+        "required": [
+          "service",
+          "redis",
+          "postgres",
+          "kafka"
+        ],
+        "properties": {
+          "service": {
+            "type": "string",
+            "example": "notification-service"
+          },
+          "redis": {
+            "type": "string",
+            "example": "configured"
+          },
+          "postgres": {
+            "type": "boolean",
+            "example": true
+          },
+          "kafka": {
+            "type": "boolean",
+            "example": true
+          }
+        }
+      },
+      "StatusResponse": {
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "example": "UP"
+          }
+        }
+      },
+      "SendOtpRequest": {
+        "type": "object",
+        "required": [
+          "userId",
+          "destination",
+          "code"
+        ],
+        "properties": {
+          "userId": {
+            "type": "string",
+            "example": "USR-1001"
+          },
+          "actorType": {
+            "type": "string",
+            "example": "traveler"
+          },
+          "destination": {
+            "type": "string",
+            "example": "+919999999999"
+          },
+          "channel": {
+            "type": "string",
+            "example": "sms",
+            "default": "sms"
+          },
+          "code": {
+            "type": "string",
+            "example": "482193"
+          },
+          "ttlSeconds": {
+            "type": "integer",
+            "example": 300,
+            "default": 300
+          }
+        }
+      },
+      "SendOtpAcceptedResponse": {
+        "type": "object",
+        "required": [
+          "accepted",
+          "notificationId"
+        ],
+        "properties": {
+          "accepted": {
+            "type": "boolean",
+            "example": true
+          },
+          "notificationId": {
+            "type": "string",
+            "example": "NTF-0c521d6b4579467d"
+          }
+        }
+      },
+      "SendOtpDedupedResponse": {
+        "type": "object",
+        "required": [
+          "accepted",
+          "deduped"
+        ],
+        "properties": {
+          "accepted": {
+            "type": "boolean",
+            "example": true
+          },
+          "deduped": {
+            "type": "boolean",
+            "example": true
+          }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "required": [
+          "code",
+          "message"
+        ],
+        "properties": {
+          "code": {
+            "type": "string",
+            "example": "BAD_REQUEST"
+          },
+          "message": {
+            "type": "string",
+            "example": "invalid json"
+          }
+        }
+      }
+    }
+  }
+}

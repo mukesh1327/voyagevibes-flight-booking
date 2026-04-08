@@ -884,3 +884,49 @@ Suggested storage:
 
 ---
 This plan should be treated as the implementation contract for authservice before coding controllers, DTOs, and security configuration.
+
+## Swagger / OpenAPI (Current Implementation)
+The authservice now exposes live OpenAPI/Swagger documentation when the app is running:
+
+- Swagger UI: `/swagger-ui/index.html`
+- OpenAPI JSON: `/v3/api-docs`
+- OpenAPI YAML: `/v3/api-docs.yaml`
+
+The generated Swagger includes concrete examples for the implemented request/response flows across public auth, corporate auth, sessions, profile, admin, and health endpoints.
+
+Common headers currently used by implemented endpoints:
+- `X-User-Id`
+- `X-Device`
+- `X-Forwarded-For`
+- `X-Code-Verifier`
+
+## Implemented Endpoint Inventory (Current Code)
+| Method | Path | Purpose |
+| --- | --- | --- |
+| `GET` | `/api/v1/auth/public/google/start` | Start public Google login and return PKCE/state metadata. |
+| `GET` | `/api/v1/auth/public/google/callback` | Complete Google callback and issue public session tokens. |
+| `POST` | `/api/v1/auth/public/logout` | Logout public user and optionally revoke all sessions. |
+| `POST` | `/api/v1/auth/public/step-up/otp/request` | Create a public step-up OTP challenge. |
+| `POST` | `/api/v1/auth/public/step-up/otp/verify` | Verify a public step-up OTP challenge. |
+| `POST` | `/api/v1/auth/corp/login/init` | Initialize a corporate login flow. |
+| `POST` | `/api/v1/auth/corp/login/verify` | Verify the primary corporate login factor. |
+| `POST` | `/api/v1/auth/corp/mfa/challenge` | Create a corporate MFA challenge. |
+| `POST` | `/api/v1/auth/corp/mfa/verify` | Verify corporate MFA and issue a session. |
+| `POST` | `/api/v1/auth/corp/logout` | Logout corporate user and optionally revoke all sessions. |
+| `POST` | `/api/v1/auth/token/refresh` | Refresh session tokens. |
+| `GET` | `/api/v1/sessions/me` | List active sessions for the current user. |
+| `DELETE` | `/api/v1/sessions/me/{sessionId}` | Revoke one session for the current user. |
+| `POST` | `/api/v1/auth/logout` | Shared logout endpoint for authenticated users. |
+| `GET` | `/api/v1/users/me` | Fetch the current user's profile. |
+| `PATCH` | `/api/v1/users/me` | Update the current user's profile. |
+| `POST` | `/api/v1/corp/users` | Create a corporate workforce user. |
+| `PATCH` | `/api/v1/corp/users/{id}` | Update a corporate workforce user. |
+| `POST` | `/api/v1/corp/users/{id}/enable` | Enable a corporate user. |
+| `POST` | `/api/v1/corp/users/{id}/disable` | Disable a corporate user and revoke sessions. |
+| `POST` | `/api/v1/corp/users/{id}/roles` | Assign a role to a corporate user. |
+| `DELETE` | `/api/v1/corp/users/{id}/roles/{roleId}` | Remove a role from a corporate user. |
+| `POST` | `/api/v1/corp/users/{id}/force-mfa-reset` | Force MFA reset for a corporate user. |
+| `POST` | `/api/v1/corp/users/{id}/session-revoke` | Revoke all sessions for a corporate user. |
+| `GET` | `/api/v1/health` | Dependency-aware service health status. |
+| `GET` | `/api/v1/health/ready` | Readiness check with dependency validation. |
+| `GET` | `/api/v1/health/live` | Process liveness check. |

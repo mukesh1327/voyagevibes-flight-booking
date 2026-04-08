@@ -1,6 +1,8 @@
 import { Routes } from '@angular/router';
 
+import { adminGuard } from './core/guards/admin.guard';
 import { authGuard } from './core/guards/auth.guard';
+import { CorpAdminPageComponent } from './features/admin/corp-admin-page.component';
 import { CorpAuthPageComponent } from './features/auth/corp-auth-page.component';
 import { CorpBookingsPageComponent } from './features/bookings/corp-bookings-page.component';
 import { CorpDashboardPageComponent } from './features/dashboard/corp-dashboard-page.component';
@@ -21,6 +23,7 @@ export const routes: Routes = [
       { path: 'flights', component: CorpFlightsPageComponent },
       { path: 'bookings', component: CorpBookingsPageComponent },
       { path: 'payments', component: CorpPaymentsPageComponent },
+      { path: 'admin', component: CorpAdminPageComponent, canActivate: [adminGuard] },
     ],
   },
   { path: '**', redirectTo: 'workspace/dashboard' },

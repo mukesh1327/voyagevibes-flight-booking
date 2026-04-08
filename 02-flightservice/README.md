@@ -12,6 +12,26 @@ Quarkus service for flight search, availability, pricing, and inventory hold lif
 - `POST /api/v1/inventory/commit`
 - `GET /api/v1/health`, `/live`, `/ready`
 
+## Swagger UI
+Swagger UI is available at:
+- `http://localhost:8082/swagger-ui`
+- `https://flight.voyagevibes.in:8082/swagger-ui`
+
+OpenAPI spec is available at:
+- `http://localhost:8082/q/openapi`
+- `https://flight.voyagevibes.in:8082/q/openapi`
+
+The UI groups the API by:
+- Flights
+- Pricing
+- Inventory
+- Health
+
+It also documents the main integrations used by this service:
+- MySQL for flight catalog and seat inventory
+- Kafka publish topic `flight.inventory.events`
+- Kafka consume topic `booking.events`
+
 ## Actor Split (Customer vs Corp)
 Aligned with `auth-service` model (`PUBLIC` customer realm and `CORP` corporate realm).
 

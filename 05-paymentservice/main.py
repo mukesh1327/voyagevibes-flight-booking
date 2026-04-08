@@ -4,14 +4,24 @@ import signal
 import threading
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Mapping, Optional
+from typing import Annotated, Mapping, Optional
 import uvicorn
 
-from fastapi import FastAPI, Header, HTTPException
+from fastapi import Body, FastAPI, Header, HTTPException, Path
+from fastapi.openapi.utils import get_openapi
+from fastapi.responses import RedirectResponse
 
 from app.actor import actor_type_from_context
 from app.kafka_runtime import PaymentKafkaRuntime
-from app.models import PaymentActionRequest, PaymentIntentRequest, PaymentWebhookRequest
+from app.models import (
+    ErrorResponse,
+    HealthResponse,
+    PaymentActionRequest,
+    PaymentIntentRequest,
+    PaymentResponse,
+    PaymentWebhookRequest,
+    ProviderWebhookAckResponse,
+)
 from app.observability import configure as configure_otel
 from app.providers import RazorpayGateway
 from app.repository import create_repository_from_env
@@ -22,6 +32,94 @@ service = PaymentService(create_repository_from_env(), razorpay_gateway=Razorpay
 kafka_runtime = PaymentKafkaRuntime(service)
 runtime_lock = threading.Lock()
 runtime_ref_count = 0
+
+API_DESCRIPTION = """
+HTTP API for the VoyageVibes payment service.
+
+Use the payment endpoints to create intents and transition payments through authorization,
+capture, and refund workflows. The Swagger UI also documents the operational health checks
+and provider webhook endpoint exposed by this service.
+""".strip()
+
+OPENAPI_TAGS = [
+    {
+        "name": "Health",
+        "description": "Operational probes used by infrastructure and readiness checks.",
+    },
+    {
+        "name": "Payments",
+        "description": "Payment lifecycle APIs for creating intents and processing status transitions.",
+    },
+    {
+        "name": "Webhooks",
+        "description": "Inbound provider callbacks accepted by the payment service.",
+    },
+]
+
+INTENT_ERROR_RESPONSES = {
+    409: {"model": ErrorResponse, "description": "Duplicate or invalid request for the current payment state."},
+    502: {"model": ErrorResponse, "description": "The upstream payment provider request failed."},
+}
+
+TRANSITION_ERROR_RESPONSES = {
+    403: {"model": ErrorResponse, "description": "The caller is not allowed to access this payment."},
+    404: {"model": ErrorResponse, "description": "The payment id was not found."},
+    409: {"model": ErrorResponse, "description": "The requested state transition is not allowed."},
+    502: {"model": ErrorResponse, "description": "The upstream payment provider request failed."},
+}
+
+UserIdHeader = Annotated[
+    Optional[str],
+    Header(
+        default="U-DEFAULT",
+        alias="X-User-Id",
+        description="Caller identity. Customer requests are checked against the payment owner.",
+    ),
+]
+
+ActorTypeHeader = Annotated[
+    Optional[str],
+    Header(
+        default=None,
+        alias="X-Actor-Type",
+        description="Actor type for authorization decisions, typically `customer` or `corp`.",
+    ),
+]
+
+RealmHeader = Annotated[
+    Optional[str],
+    Header(
+        default=None,
+        alias="X-Realm",
+        description="Optional realm hint used to infer actor type when it is not sent explicitly.",
+    ),
+]
+
+CorrelationIdHeader = Annotated[
+    Optional[str],
+    Header(
+        default=None,
+        alias="X-Correlation-Id",
+        description="Trace or workflow correlation id propagated to emitted payment events.",
+    ),
+]
+
+PaymentIdPath = Annotated[
+    str,
+    Path(
+        ...,
+        description="Internal payment id returned by the payment intent API.",
+        examples=["PAY-9A8B7C6D5E4F"],
+    ),
+]
+
+PaymentActionBody = Annotated[
+    Optional[PaymentActionRequest],
+    Body(
+        default=None,
+        description="Optional provider-specific details used during authorization, capture, or refund transitions.",
+    ),
+]
 
 
 def _start_runtime():
@@ -73,10 +171,65 @@ async def lifespan(_app: FastAPI):
         _release_runtime()
 
 
-app = FastAPI(title="VoyageVibes Payment Service", version="1.0.0", lifespan=lifespan)
+app = FastAPI(
+    title="VoyageVibes Payment Service API",
+    version="1.0.0",
+    description=API_DESCRIPTION,
+    lifespan=lifespan,
+    openapi_tags=OPENAPI_TAGS,
+    swagger_ui_parameters={
+        "displayRequestDuration": True,
+        "tryItOutEnabled": True,
+        "docExpansion": "list",
+    },
+)
 otel_logger_provider = configure_otel("payment-service")
 if otel_logger_provider:
     FastAPIInstrumentor.instrument_app(app)
+
+
+def _build_openapi_servers():
+    server_config = resolve_server_config()
+    public_host = str(server_config["public_host"]).strip().rstrip("/")
+    if public_host.startswith("http://") or public_host.startswith("https://"):
+        return [{"url": public_host, "description": "Configured public endpoint"}]
+
+    servers = [
+        {
+            "url": f"http://{public_host}:{server_config['http_port']}",
+            "description": "HTTP endpoint",
+        }
+    ]
+    if bool(server_config["ssl_enabled"]):
+        servers.append(
+            {
+                "url": f"https://{public_host}:{server_config['https_port']}",
+                "description": "HTTPS endpoint",
+            }
+        )
+    return servers
+
+
+def custom_openapi():
+    if app.openapi_schema:
+        return app.openapi_schema
+
+    openapi_schema = get_openapi(
+        title=app.title,
+        version=app.version,
+        description=app.description,
+        tags=OPENAPI_TAGS,
+        routes=app.routes,
+    )
+    openapi_schema["info"]["contact"] = {
+        "name": "VoyageVibes Platform",
+    }
+    openapi_schema["servers"] = _build_openapi_servers()
+    app.openapi_schema = openapi_schema
+    return app.openapi_schema
+
+
+app.openapi = custom_openapi
 
 
 def _parse_bool(value: Optional[str], default: bool) -> bool:
@@ -162,28 +315,61 @@ def resolve_server_config(env: Optional[Mapping[str, str]] = None):
     }
 
 
-@app.get("/api/v1/health")
+@app.get(
+    "/swagger",
+    include_in_schema=False,
+)
+def swagger_redirect():
+    return RedirectResponse(url=app.docs_url or "/docs")
+
+
+@app.get(
+    "/api/v1/health",
+    tags=["Health"],
+    summary="Overall health check",
+    description="Returns the service status plus storage, provider, and Kafka runtime details.",
+    response_model=HealthResponse,
+)
 def health():
     return service.health("health")
 
 
-@app.get("/api/v1/health/live")
+@app.get(
+    "/api/v1/health/live",
+    tags=["Health"],
+    summary="Liveness probe",
+    description="Lightweight liveness endpoint used by container platforms.",
+    response_model=HealthResponse,
+)
 def health_live():
     return service.health("live")
 
 
-@app.get("/api/v1/health/ready")
+@app.get(
+    "/api/v1/health/ready",
+    tags=["Health"],
+    summary="Readiness probe",
+    description="Readiness endpoint for dependency-aware startup checks.",
+    response_model=HealthResponse,
+)
 def health_ready():
     return service.health("ready")
 
 
-@app.post("/api/v1/payments/intent")
+@app.post(
+    "/api/v1/payments/intent",
+    tags=["Payments"],
+    summary="Create payment intent",
+    description="Creates a payment intent and, when configured, also creates an upstream provider order.",
+    response_model=PaymentResponse,
+    responses=INTENT_ERROR_RESPONSES,
+)
 def create_intent(
     payload: PaymentIntentRequest,
-    x_user_id: Optional[str] = Header(default="U-DEFAULT"),
-    x_actor_type: Optional[str] = Header(default=None),
-    x_realm: Optional[str] = Header(default=None),
-    x_correlation_id: Optional[str] = Header(default=None),
+    x_user_id: UserIdHeader,
+    x_actor_type: ActorTypeHeader,
+    x_realm: RealmHeader,
+    x_correlation_id: CorrelationIdHeader,
 ):
     actor_type = actor_type_from_context(x_actor_type, x_realm)
     try:
@@ -203,14 +389,21 @@ def create_intent(
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 
 
-@app.post("/api/v1/payments/{payment_id}/authorize")
+@app.post(
+    "/api/v1/payments/{payment_id}/authorize",
+    tags=["Payments"],
+    summary="Authorize payment",
+    description="Moves a payment from `INTENT_CREATED` to `AUTHORIZED` after provider authorization succeeds.",
+    response_model=PaymentResponse,
+    responses=TRANSITION_ERROR_RESPONSES,
+)
 def authorize(
-    payment_id: str,
-    payload: Optional[PaymentActionRequest] = None,
-    x_user_id: Optional[str] = Header(default="U-DEFAULT"),
-    x_actor_type: Optional[str] = Header(default=None),
-    x_realm: Optional[str] = Header(default=None),
-    x_correlation_id: Optional[str] = Header(default=None),
+    payment_id: PaymentIdPath,
+    payload: PaymentActionBody,
+    x_user_id: UserIdHeader,
+    x_actor_type: ActorTypeHeader,
+    x_realm: RealmHeader,
+    x_correlation_id: CorrelationIdHeader,
 ):
     actor_type = actor_type_from_context(x_actor_type, x_realm)
     try:
@@ -236,14 +429,21 @@ def authorize(
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 
 
-@app.post("/api/v1/payments/{payment_id}/capture")
+@app.post(
+    "/api/v1/payments/{payment_id}/capture",
+    tags=["Payments"],
+    summary="Capture payment",
+    description="Captures an authorized payment and stores the provider response payload.",
+    response_model=PaymentResponse,
+    responses=TRANSITION_ERROR_RESPONSES,
+)
 def capture(
-    payment_id: str,
-    payload: Optional[PaymentActionRequest] = None,
-    x_user_id: Optional[str] = Header(default="U-DEFAULT"),
-    x_actor_type: Optional[str] = Header(default=None),
-    x_realm: Optional[str] = Header(default=None),
-    x_correlation_id: Optional[str] = Header(default=None),
+    payment_id: PaymentIdPath,
+    payload: PaymentActionBody,
+    x_user_id: UserIdHeader,
+    x_actor_type: ActorTypeHeader,
+    x_realm: RealmHeader,
+    x_correlation_id: CorrelationIdHeader,
 ):
     actor_type = actor_type_from_context(x_actor_type, x_realm)
     try:
@@ -269,14 +469,21 @@ def capture(
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 
 
-@app.post("/api/v1/payments/{payment_id}/refund")
+@app.post(
+    "/api/v1/payments/{payment_id}/refund",
+    tags=["Payments"],
+    summary="Refund payment",
+    description="Refunds an authorized or captured payment, optionally as a partial refund when `amount` is provided.",
+    response_model=PaymentResponse,
+    responses=TRANSITION_ERROR_RESPONSES,
+)
 def refund(
-    payment_id: str,
-    payload: Optional[PaymentActionRequest] = None,
-    x_user_id: Optional[str] = Header(default="U-DEFAULT"),
-    x_actor_type: Optional[str] = Header(default=None),
-    x_realm: Optional[str] = Header(default=None),
-    x_correlation_id: Optional[str] = Header(default=None),
+    payment_id: PaymentIdPath,
+    payload: PaymentActionBody,
+    x_user_id: UserIdHeader,
+    x_actor_type: ActorTypeHeader,
+    x_realm: RealmHeader,
+    x_correlation_id: CorrelationIdHeader,
 ):
     actor_type = actor_type_from_context(x_actor_type, x_realm)
     try:
@@ -302,7 +509,13 @@ def refund(
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 
 
-@app.post("/api/v1/payments/webhooks/provider")
+@app.post(
+    "/api/v1/payments/webhooks/provider",
+    tags=["Webhooks"],
+    summary="Accept provider webhook",
+    description="Accepts provider webhook payloads and returns a lightweight acknowledgement.",
+    response_model=ProviderWebhookAckResponse,
+)
 def provider_webhook(payload: PaymentWebhookRequest):
     return {
         "accepted": True,
