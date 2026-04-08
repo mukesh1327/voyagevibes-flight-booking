@@ -24,9 +24,10 @@ services:
 
 # Booking Service API
   booking-service:
-    build:
-      context: .
-      dockerfile: ./docker/Containerfile
+    image: quay.io/mukeshs1306/voyagevibes-bookingservice:latest
+    # build:
+    #   context: .
+    #   dockerfile: ./docker/Containerfile
     container_name: booking-service
     restart: always
     env_file:

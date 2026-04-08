@@ -1,8 +1,9 @@
 services:
   corp-ui:
-    build:
-      context: .
-      dockerfile: ./docker/Containerfile
+    image: quay.io/mukeshs1306/voyagevibes-ui-customer:latest
+    # build:
+    #   context: .
+    #   dockerfile: ./docker/Containerfile
     container_name: corp-ui
     restart: always
     env_file:

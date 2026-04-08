@@ -26,9 +26,10 @@ services:
 
 # Flight service application
   flight-service:
-    build:
-      context: .
-      dockerfile: src/main/docker/Dockerfile.jvm
+    image: quay.io/mukeshs1306/voyagevibes-flightservice:latest
+    # build:
+    #   context: .
+    #   dockerfile: src/main/docker/Dockerfile.jvm
     container_name: flight-service
     restart: always
     env_file:

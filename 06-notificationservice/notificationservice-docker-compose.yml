@@ -22,9 +22,10 @@ services:
       - flight-booking-network
 
   notification-service:
-    build:
-      context: .
-      dockerfile: ./docker/Containerfile
+    image: quay.io/mukeshs1306/voyagevibes-paymentservice:latest
+    # build:
+    #   context: .
+    #   dockerfile: ./docker/Containerfile
     container_name: notification-service
     restart: always
     env_file:

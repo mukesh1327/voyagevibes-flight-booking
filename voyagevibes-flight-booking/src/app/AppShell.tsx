@@ -404,23 +404,25 @@ export function AppShell() {
     }
 
     if (availabilityResponse.success && availabilityResponse.data) {
+      const availability = availabilityResponse.data;
       setSelectedFlight((current) => (
         current
           ? {
               ...current,
-              availability: availabilityResponse.data,
+              availability,
             }
           : current
       ));
     }
 
     if (quoteResponse.success && quoteResponse.data) {
-      setPricingQuote(quoteResponse.data);
+      const quote = quoteResponse.data;
+      setPricingQuote(quote);
       setSelectedFlight((current) => (
         current
           ? {
               ...current,
-              pricing: quoteResponse.data.pricing,
+              pricing: quote.pricing,
             }
           : current
       ));

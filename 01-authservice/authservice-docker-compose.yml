@@ -27,9 +27,10 @@ services:
 
 # Auth service
   auth-service:
-    build: 
-      context: .
-      dockerfile: ./docker/Containerfile.multistage
+    image: quay.io/mukeshs1306/voyagevibes-authservice:latest
+    # build: 
+    #   context: .
+    #   dockerfile: ./docker/Containerfile.multistage
     container_name: auth-service
     restart: always
     env_file:

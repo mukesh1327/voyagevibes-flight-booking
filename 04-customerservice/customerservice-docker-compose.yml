@@ -23,9 +23,10 @@ services:
 
 # Customer Service API
   customer-service:
-    build:
-      context: .
-      dockerfile: ./docker/Containerfile
+    image: quay.io/mukeshs1306/voyagevibes-customerservice:latest
+    # build:
+    #   context: .
+    #   dockerfile: ./docker/Containerfile
     container_name: customer-service
     restart: always
     env_file:

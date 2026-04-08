@@ -178,6 +178,12 @@ func WrapHandler(handler http.Handler, serviceName string) http.Handler {
 		}
 		counter.Add(r.Context(), 1, metric.WithAttributes(attrs...))
 		histogram.Record(r.Context(), durationMs, metric.WithAttributes(attrs...))
+		logAttrs := []otelog.KeyValue{
+			otelog.String("http.method", r.Method),
+			otelog.String("http.route", r.URL.Path),
+			otelog.Int("http.status_code", rec.status),
+			otelog.Float64("http.duration_ms", durationMs),
+		}
 
 		record := otelog.Record{}
 		record.SetBody(otelog.StringValue("http.request"))
@@ -186,8 +192,7 @@ func WrapHandler(handler http.Handler, serviceName string) http.Handler {
 		} else {
 			record.SetSeverity(otelog.SeverityInfo)
 		}
-		record.AddAttributes(attrs...)
-		record.AddAttributes(attribute.Float64("http.duration_ms", durationMs))
+		record.AddAttributes(logAttrs...)
 		logger.Emit(r.Context(), record)
 	})
 }

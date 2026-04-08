@@ -24,9 +24,10 @@ services:
 
 # Payment Service API
   payment-service:
-    build:
-      context: .
-      dockerfile: ./docker/Containerfile
+    image: quay.io/mukeshs1306/voyagevibes-paymentservice:latest
+    # build:
+    #   context: .
+    #   dockerfile: ./docker/Containerfile
     container_name: payment-service
     restart: always
     env_file:

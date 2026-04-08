@@ -1,8 +1,9 @@
 services:
   customer-ui:
-    build:
-      context: .
-      dockerfile: ./docker/Containerfile
+    image: quay.io/mukeshs1306/voyagevibes-ui-customer:latest
+    # build:
+    #   context: .
+    #   dockerfile: ./docker/Containerfile
     container_name: customer-ui
     restart: always
     env_file:
