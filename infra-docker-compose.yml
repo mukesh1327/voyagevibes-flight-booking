@@ -2,26 +2,11 @@
 
 include:
 
-# Auth service
-  - ./01-authservice/authservice-docker-compose.yml
+# Databases
+  - ./00-infraservices/databases-docker-compose.yml
+  - ./00-infraservices/garage-objectstore-docker-compose.yml
 
-# Flight service
-  - ./02-flightservice/flightservice-docker-compose.yml
-
-# Booking service
-  - ./03-bookingservice/bookingservice-docker-compose.yml
-
-# Customer service
-  - ./04-customerservice/customerservice-docker-compose.yml
-
-# Payment service
-  - ./05-paymentservice/paymentservice-docker-compose.yml
-
-# Notification service
-  - ./06-notificationservice/notificationservice-docker-compose.yml
-
-# Voyage Vibes Customer UI
-  - ./voyagevibes-flight-booking/customer-ui-docker-compose.yml
-
-# Voyage Vibes Corp UI
-  - ./voyagevibes-corp/corp-ui-docker-compose.yml
+# Infra services
+  - ./00-infraservices/kafka-docker-compose.yml
+  - ./00-infraservices/kong-gateway-docker-compose.yml
+  - ./00-infraservices/keycloak-docker-compose.yml

@@ -1,0 +1,4 @@
+include:
+
+# # Observability stack
+  - ./00-infraservices/observability-docker-compose.yml

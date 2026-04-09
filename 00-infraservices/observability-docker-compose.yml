@@ -28,8 +28,18 @@ services:
     networks:
       - flight-booking-network
 
+  loki:
+    image: docker.io/grafana/loki:latest
+    ports:
+      - "3100:3100"
+    networks:
+      - flight-booking-network
+    volumes:
+      - ./observability/loki/loki-config.yaml:/etc/loki/loki-config.yaml
+    command: -config.file=/etc/loki/loki-config.yaml
+
   grafana:
-    image: grafana/grafana:latest
+    image: docker.io/grafana/grafana:latest
     container_name: grafana
     environment:
       - GF_SECURITY_ADMIN_USER=admin

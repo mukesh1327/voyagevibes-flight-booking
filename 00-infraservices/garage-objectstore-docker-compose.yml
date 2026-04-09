@@ -1,0 +1,70 @@
+services:
+
+# ================= Garage Standalone (Object Storage) ========================
+
+  platform_garage_standalone:
+    image: dxflrs/garage:v2.2.0
+    container_name: platform_garage_standalone
+    volumes:
+      - ./garage-object-storage/garage-standalone.toml:/etc/garage.toml
+      - platform_garage_meta:/var/lib/garage/meta
+      - platform_garage_data:/var/lib/garage/data
+    restart: unless-stopped
+    environment:
+      - RUST_LOG=garage=info
+    ports:
+      - 3900:3900
+      - 3901:3901
+      - 3902:3902
+      - 3903:3903
+    networks:
+      - flight-booking-network
+
+  platform_garage_standalone-webui:
+    image: khairul169/garage-webui:1.1.0
+    container_name: platform_garage_standalone-webui
+    restart: unless-stopped
+    volumes:
+      - ./garage-object-storage/garage-standalone.toml:/etc/garage.toml:ro
+    ports:
+      - 3909:3909
+    environment:
+      API_BASE_URL: "http://platform_garage_standalone:3903"
+      S3_ENDPOINT_URL: "http://platform_garage_standalone:3900"
+    depends_on:
+      - platform_garage_standalone
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3909 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    networks:
+      - flight-booking-network
+
+  # platform_garage_nginx:
+  #   image: registry.redhat.io/ubi9/nginx-126:9.7
+  #   # image: nginx:alpine
+  #   container_name: platform_garage_nginx
+  #   command: ["nginx", "-g", "daemon off;"]
+  #   volumes:
+  #     - ./garage-object-storage/nginx-standalone.conf:/etc/nginx/nginx.conf:ro
+  #   depends_on:
+  #     - platform_garage_standalone
+  #   restart: unless-stopped
+  #   networks:
+  #     - flight-booking-network
+
+# ================= Network ========================
+
+networks:
+  flight-booking-network:
+    name: flight-booking-network
+    driver: bridge
+
+# ================= Volumes ========================
+
+volumes:
+
+  platform_garage_data:
+  platform_garage_meta:

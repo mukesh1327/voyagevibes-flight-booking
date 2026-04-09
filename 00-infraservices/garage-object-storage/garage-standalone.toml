@@ -1,12 +1,12 @@
 metadata_dir = "/var/lib/garage/meta"
 data_dir = "/var/lib/garage/data"
-db_engine = "sqlite"
+db_engine = "lmdb"
 
 replication_factor = 1
 
 rpc_bind_addr = "0.0.0.0:3901"
 rpc_public_addr = "127.0.0.1:3901"
-rpc_secret = "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"
+rpc_secret = "120cf30f4465382c4a9ab79bd03f047ddfc1119ecc126c13fea3c31549428da6" # generate secret with `openssl rand -hex 32`
 
 [s3_api]
 s3_region = "garage"
@@ -20,5 +20,5 @@ index = "index.html"
 
 [admin]
 api_bind_addr = "0.0.0.0:3903"
-admin_token = "admin-secret-token-change-me"
-metrics_token = "metrics-secret-token-change-me"
+admin_token = "87d69deb21139126d121a95e3b689e4a56bfdb8031ad803fe65776985869927f"  # generate secret with `openssl rand -hex 32`
+metrics_token = "8d52c681ff0c3648282a5affe7f53ef469ffa4d681926688798de7bbd881eb59" # generate secret with `openssl rand -hex 32`
