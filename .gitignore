@@ -31,5 +31,6 @@ voyagevibes-public-realm.json
 
 out
 go.sum
+!06-notificationservice/go.sum
 
 .m2

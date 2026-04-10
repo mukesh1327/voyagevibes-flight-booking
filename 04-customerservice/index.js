@@ -55,7 +55,7 @@ function resolveServerConfig(env) {
   const httpPort = Number.isFinite(parsedHttpPort) && parsedHttpPort > 0 ? parsedHttpPort : 8084;
   const parsedHttpsPort = Number(env.HTTPS_PORT || 9094);
   const httpsPort = Number.isFinite(parsedHttpsPort) && parsedHttpsPort > 0 ? parsedHttpsPort : 9094;
-  const sslEnabled = parseBoolean(env.SERVER_SSL_ENABLED ?? env.HTTPS_ENABLED, true);
+  const sslEnabled = parseBoolean(env.SERVER_SSL_ENABLED ?? env.HTTPS_ENABLED, false);
   const listenHost = env.SERVER_HOST || env.LISTEN_HOST || '0.0.0.0';
   const publicHost = normalizeHost(env.PUBLIC_HOST || env.PUBLIC_BASE_URL || env.SERVICE_PUBLIC_URL, 'customer.voyagevibes.in');
   const certHost = normalizeHost(env.SERVER_SSL_CERT_HOST, publicHost);
@@ -311,4 +311,5 @@ bootstrap().catch((error) => {
   console.error(error.message);
   process.exit(1);
 });
+
 

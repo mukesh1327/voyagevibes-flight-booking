@@ -13,9 +13,9 @@ services:
         until mongosh --host platform_mongodb --username \"$$MONGODB_INITDB_ROOT_USERNAME\" --password \"$$MONGODB_INITDB_ROOT_PASSWORD\" --authenticationDatabase admin --quiet --eval \"db.adminCommand({ ping: 1 })\"; do sleep 2; done;
         mongosh --host platform_mongodb --username \"$$MONGODB_INITDB_ROOT_USERNAME\" --password \"$$MONGODB_INITDB_ROOT_PASSWORD\" --authenticationDatabase admin /init/init-customer-db.js
       "
-    depends_on:
-      platform_mongodb:
-        condition: service_healthy
+    # depends_on:
+    #   platform_mongodb:
+    #     condition: service_healthy
     volumes:
       - ./db:/init:ro
     networks:
@@ -33,14 +33,15 @@ services:
       - ./.env
     ports:
       - "8084:8084"
-      - "9094:9094"
     volumes:
       - ./https-certs:/opt/app-root/src/https-certs:ro
     depends_on:
+      auth-service:
+        condition: service_started
       customerservice_mongodb_init:
         condition: service_completed_successfully
-      platform_mongodb:
-        condition: service_healthy
+      # platform_mongodb:
+      #   condition: service_healthy
     networks:
       - flight-booking-network
 
@@ -50,3 +51,4 @@ networks:
   flight-booking-network:
     name: flight-booking-network
     driver: bridge
+

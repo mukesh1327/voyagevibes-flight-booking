@@ -279,7 +279,7 @@ def resolve_server_config(env: Optional[Mapping[str, str]] = None):
         parsed_https_port = 9095
     https_port = parsed_https_port if parsed_https_port > 0 else 9095
 
-    ssl_enabled = _parse_bool(source.get("SERVER_SSL_ENABLED", source.get("HTTPS_ENABLED")), True)
+    ssl_enabled = _parse_bool(source.get("SERVER_SSL_ENABLED", source.get("HTTPS_ENABLED")), False)
     listen_host = str(source.get("SERVER_HOST", source.get("LISTEN_HOST", "0.0.0.0"))).strip() or "0.0.0.0"
     public_host = str(
         source.get("PUBLIC_HOST", source.get("PUBLIC_BASE_URL", source.get("SERVICE_PUBLIC_URL", listen_host)))
@@ -606,3 +606,4 @@ if __name__ == "__main__":
             )
 
     asyncio.run(run_servers(server_config))
+

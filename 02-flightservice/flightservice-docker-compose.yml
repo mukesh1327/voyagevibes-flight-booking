@@ -14,9 +14,9 @@ services:
         until mysqladmin ping -h platform_mysql -u root --silent; do sleep 2; done;
         mysql -h platform_mysql -u root < /init/init-flights-db.sql
       "
-    depends_on:
-      platform_mysql:
-        condition: service_healthy
+    # depends_on:
+    #   platform_mysql:
+    #     condition: service_healthy
     volumes:
       - ./db:/init:ro
     networks:
@@ -35,13 +35,12 @@ services:
     env_file:
       - ./.env
     ports:
-      - "9092:9092"
       - "8082:8082"
     depends_on:
       auth-service:
         condition: service_started
-      platform_mysql:
-        condition: service_healthy
+      # platform_mysql:
+      #   condition: service_healthy
       flightservice_mysql_init:
         condition: service_completed_successfully
     volumes:

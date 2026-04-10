@@ -13,16 +13,17 @@ services:
         until pg_isready -h platform_postgres -U $$POSTGRESQL_USER -d $$POSTGRESQL_DATABASE; do sleep 2; done;
         psql -h platform_postgres -U $$POSTGRESQL_USER -d $$POSTGRESQL_DATABASE -v ON_ERROR_STOP=1 -f /init/init-notification-db.sql
       "
-    depends_on:
-      platform_postgres:
-        condition: service_healthy
+    # depends_on:
+    #   platform_postgres:
+    #     condition: service_healthy
+  
     volumes:
       - ./db:/init:ro
     networks:
       - flight-booking-network
 
   notification-service:
-    image: quay.io/mukeshs1306/voyagevibes-paymentservice:latest
+    image: quay.io/mukeshs1306/voyagevibes-notificationservice:latest
     # build:
     #   context: .
     #   dockerfile: ./docker/Containerfile
@@ -31,16 +32,18 @@ services:
     env_file:
       - ./.env
     ports:
-      - "8087:8087"
+      - "8086:8086"
     volumes:
       - ./https-certs:/app/https-certs:ro
     depends_on:
-      platform_postgres:
-        condition: service_healthy
+      auth-service:
+        condition: service_started
+      # platform_postgres:
+      #   condition: service_healthy
       notificationservice_postgres_init:
         condition: service_completed_successfully
-      platform_redis:
-        condition: service_healthy
+      # platform_redis:
+      #   condition: service_healthy
     networks:
       - flight-booking-network
 

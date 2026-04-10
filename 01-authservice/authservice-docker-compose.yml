@@ -14,9 +14,9 @@ services:
         until pg_isready -h platform_postgres -U $$POSTGRESQL_USER -d $$POSTGRESQL_DATABASE; do sleep 2; done;
         psql -h platform_postgres -U $$POSTGRESQL_USER -d $$POSTGRESQL_DATABASE -v ON_ERROR_STOP=1 -f /init/init-auth-db.sql
       "
-    depends_on:
-      platform_postgres:
-        condition: service_healthy
+    # depends_on:
+    #   platform_postgres:
+    #     condition: service_healthy
 
     volumes:
       - ./db:/init:ro
@@ -36,16 +36,15 @@ services:
     env_file:
       - ./.env.authservice
     depends_on:
-      keycloak:
-        condition: service_healthy
-      platform_postgres:
-        condition: service_healthy
+      # keycloak:
+      #   condition: service_healthy
+      # platform_postgres:
+      #   condition: service_healthy
       authservice_postgres_init:
         condition: service_completed_successfully
   
     ports:
       - "8081:8081"
-      - "9091:9091"
     volumes:
       - ./https-certs/authservice:/etc/ssl/https-certs:ro
     networks:

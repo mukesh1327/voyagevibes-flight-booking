@@ -35,7 +35,7 @@ type Config struct {
 func Load() Config {
 	return Config{
 		HttpHost:          getString("HTTP_HOST", ""),
-		HttpPort:          getInt("HTTP_PORT", 8087),
+		HttpPort:          getInt("HTTP_PORT", 8086),
 		HttpsEnabled:      getBool("HTTPS_ENABLED", true),
 		TlsCertFile:       getString("TLS_CERT_FILE", "https-certs/notification.voyagevibes.in.crt.pem"),
 		TlsKeyFile:        getString("TLS_KEY_FILE", "https-certs/notification.voyagevibes.in.key.pem"),

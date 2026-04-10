@@ -50,20 +50,20 @@
       "directAccessGrantsEnabled": false,
       "serviceAccountsEnabled": false,
       "redirectUris": [
-        "https://customer-ui.voyagevibes.in:8080/auth/google/callback",
-        "https://localhost:8080/auth/google/callback",
+        "https://customer-ui.voyagevibes.in:9001/auth/google/callback",
+        "https://localhost:9001/auth/google/callback",
         "http://localhost:5173/auth/google/callback",
         "https://localhost:5173/auth/google/callback"
       ],
       "webOrigins": [
-        "https://customer-ui.voyagevibes.in:8080",
-        "https://localhost:8080",
+        "https://customer-ui.voyagevibes.in:9001",
+        "https://localhost:9001",
         "http://localhost:5173",
         "https://localhost:5173"
       ],
       "attributes": {
         "pkce.code.challenge.method": "S256",
-        "post.logout.redirect.uris": "https://customer-ui.voyagevibes.in:8080/* https://localhost:8080/* http://localhost:5173/* https://localhost:5173/*"
+        "post.logout.redirect.uris": "https://customer-ui.voyagevibes.in:9001/* https://localhost:9001/* http://localhost:5173/* https://localhost:5173/*"
       },
       "defaultClientScopes": [
         "web-origins",

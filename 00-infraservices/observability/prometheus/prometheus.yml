@@ -11,6 +11,19 @@ scrape_configs:
     static_configs:
       - targets: ['opentelemetry-collector:8888']
 
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: [ 'localhost:9090' ]
+  - job_name: 'tempo'
+    static_configs:
+      - targets:
+          - 'tempo:3200'
+
+  # - job_name: 'vulture'
+  #   static_configs:
+  #     - targets:
+  #         - 'vulture:8080'
+
   # Add service metrics here when available (example):
   # - job_name: 'booking-service'
   #   metrics_path: /metrics

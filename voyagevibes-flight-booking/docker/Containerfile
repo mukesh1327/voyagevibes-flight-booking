@@ -9,6 +9,7 @@ COPY --chown=1001:0 ./docker/nginx/02-customer-ui-https.conf /opt/app-root/etc/n
 
 RUN mkdir -p /opt/app-root/src/logs/nginx && chown -R 1001:0 /opt/app-root/src/logs/nginx
 
-EXPOSE 8080 8443
+EXPOSE 9001
 
 CMD ["nginx", "-g", "daemon off;"]
+

@@ -1,5 +1,6 @@
 FROM registry.redhat.io/rhel8/dotnet-80-runtime:latest
 WORKDIR /app
 COPY ../publish/ .
-EXPOSE 8083 9093
+EXPOSE 8083
 ENTRYPOINT ["dotnet", "bookingservice.dll"]
+

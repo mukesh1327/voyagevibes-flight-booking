@@ -1,5 +1,5 @@
 FROM registry.redhat.io/ubi9/go-toolset:9.7 AS build
 WORKDIR /app
 COPY out/notification-service /app/notification-service
-EXPOSE 8087
+EXPOSE 8086
 ENTRYPOINT ["/app/notification-service"]

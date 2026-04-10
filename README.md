@@ -8,11 +8,40 @@ Compose-managed runtime variables now live in per-service dotenv files reference
 
 ### In local containers
 
-```shell
+<!-- ```shell
 # use docker or podman
 COMPOSE_PARALLEL_RUN=1
 podman compose -f docker-compose.yml up -d
+``` -->
+
+```shell
+# Build & push apps in podman
+CONTAINER_REPO=quay.io
+CONTAINER_USERSPACE=mukeshs1306
+APP_VERSION=v1.002
+
+podman build -t $CONTAINER_REPO/$CONTAINER_USERSPACE/voyagevibes-authservice:$APP_VERSION -f 01-authservice/docker/Containerfile 01-authservice/
+
+podman build -t $CONTAINER_REPO/$CONTAINER_USERSPACE/voyagevibes-flightservice:$APP_VERSION -f 02-flightservice/src/main/docker/Dockerfile.jvm 02-flightservice/
+
+podman build -t $CONTAINER_REPO/$CONTAINER_USERSPACE/voyagevibes-bookingservice:$APP_VERSION -f 03-bookingservice/docker/Containerfile 03-bookingservice/
+
+podman build -t $CONTAINER_REPO/$CONTAINER_USERSPACE/voyagevibes-customerservice:$APP_VERSION -f 04-customerservice/docker/Containerfile 04-customerservice/
+
+podman build -t $CONTAINER_REPO/$CONTAINER_USERSPACE/voyagevibes-paymentservice:$APP_VERSION -f 05-paymentservice/docker/Containerfile 05-paymentservice/
+
+podman build -t $CONTAINER_REPO/$CONTAINER_USERSPACE/voyagevibes-notificationservice:$APP_VERSION -f 06-notificationservice/docker/Containerfile 06-notificationservice/
 ```
+
+```shell
+# use docker or podman
+podman compose -f infra-docker-compose.yml up -d
+
+podman compose -f observability-docker-compose.yml up -d
+
+podman compose -f app-docker-compose.yml up -d
+```
+
 
 Databases are centralized in `00-infraservices/databases-docker-compose.yml` with a shared Postgres instance and a bootstrap init for Keycloak and Kong.
 
@@ -88,26 +117,49 @@ podman pull registry.redhat.io/openshift4/network-tools-rhel9:v4.19
 
 ## Services
 
-| Service | Stack | Compose file | HTTP | HTTPS | Host bind | Notes |
-|---|---|---|---|---|---|---|
-| `kong_gateway` | Kong + shared Postgres | `00-infraservices/kong-gateway-docker-compose.yml` | `8000` | `8443` | `0.0.0.0` | Admin API on `8001` |
-| `keycloak` | Keycloak + shared Postgres | `00-infraservices/keycloak-docker-compose.yml` | `8090` | `8091` | `0.0.0.0` | Identity provider |
-| `auth-service` | Spring Boot + PostgreSQL | `01-authservice/authservice-docker-compose.yml` | `8081` | `9091` | `0.0.0.0` | Keycloak-backed auth APIs |
-| `flight-service` | Quarkus + MySQL | `02-flightservice/flightservice-docker-compose.yml` | `8082` | `9092` | `0.0.0.0` | HTTP and HTTPS both enabled |
-| `booking-service` | .NET 8 + MSSQL | `03-bookingservice/bookingservice-docker-compose.yml` | `8083` | `9093` | `0.0.0.0` | Uses flight-service over HTTP |
-| `customer-service` | Node.js + MongoDB | `04-customerservice/customerservice-docker-compose.yml` | `8084` | `9094` | `0.0.0.0` | Notification + profile APIs |
-| `payment-service` | FastAPI + PostgreSQL | `05-paymentservice/paymentservice-docker-compose.yml` | `8085` | `9095` | `0.0.0.0` | Postgres + Kafka wired in compose |
-
-## Port Map
-
-| Service | Direct HTTP | Direct HTTPS | Internal HTTP | Internal HTTPS |
+| Service | Compose file | Published host port(s) | Container port(s) | Notes |
 |---|---|---|---|---|
-| `auth-service` | `http://localhost:8081` | `https://localhost:9091` | `http://auth-service:8081` | `https://auth-service:9091` |
-| `keycloak` | `http://localhost:8090` | `https://localhost:8091` | `http://keycloak:8080` | `https://keycloak:8443` |
-| `flight-service` | `http://localhost:8082` | `https://localhost:9092` | `http://flight-service:8082` | `https://flight-service:9092` |
-| `booking-service` | `http://localhost:8083` | `https://localhost:9093` | `http://booking-service:8083` | `https://booking-service:9093` |
-| `customer-service` | `http://localhost:8084` | `https://localhost:9094` | `http://customer-service:8084` | `https://customer-service:9094` |
-| `payment-service` | `http://localhost:8085` | `https://localhost:9095` | `http://payment-service:8085` | `https://payment-service:9095` |
+| `platform_postgres` | `00-infraservices/databases-docker-compose.yml` | `5432` | `5432` | Shared Postgres for auth, payment, keycloak, kong, notification audit |
+| `platform_mysql` | `00-infraservices/databases-docker-compose.yml` | `3306` | `3306` | Flight service database |
+| `platform_mssql` | `00-infraservices/databases-docker-compose.yml` | `1433` | `1433` | Booking service database |
+| `platform_mongodb` | `00-infraservices/databases-docker-compose.yml` | `27017` | `27017` | Customer service database |
+| `platform_redis` | `00-infraservices/databases-docker-compose.yml` | `6380` | `6379` | Notification service Redis |
+| `kong_gateway` | `00-infraservices/kong-gateway-docker-compose.yml` | `8000`, `8443`, `8001` | `8000`, `8443`, `8001` | Proxy HTTP, proxy HTTPS, admin API |
+| `keycloak` | `00-infraservices/keycloak-docker-compose.yml` | `8090`, `8091` | `8080`, `8443` | Identity provider |
+| `kafka` | `00-infraservices/kafka-docker-compose.yml` | `9192`, `9193` | `9192`, `9093` | Broker and controller |
+| `opentelemetry-collector` | `00-infraservices/observability-docker-compose.yml` | `4317`, `4318`, `8888`, `8889` | `4317`, `4318`, `8888`, `8889` | OTLP and collector metrics |
+| `prometheus` | `00-infraservices/observability-docker-compose.yml` | `9090` | `9090` | Metrics store |
+| `loki` | `00-infraservices/observability-docker-compose.yml` | `3100` | `3100` | Logs store |
+| `tempo` | `00-infraservices/observability-docker-compose.yml` | `3200`, `4320`, `4321` | `3200`, `4317`, `4318` | Trace store and OTLP ingest |
+| `grafana` | `00-infraservices/observability-docker-compose.yml` | `3000` | `3000` | Dashboards |
+| `auth-service` | `01-authservice/authservice-docker-compose.yml` | `8081` | `8081` | Assigned app port |
+| `flight-service` | `02-flightservice/flightservice-docker-compose.yml` | `8082` | `8082` | Assigned app port |
+| `booking-service` | `03-bookingservice/bookingservice-docker-compose.yml` | `8083` | `8083` | Assigned app port |
+| `customer-service` | `04-customerservice/customerservice-docker-compose.yml` | `8084` | `8084` | Assigned app port |
+| `payment-service` | `05-paymentservice/paymentservice-docker-compose.yml` | `8085` | `8085` | Assigned app port |
+| `notification-service` | `06-notificationservice/notificationservice-docker-compose.yml` | `8086` | `8086` | Assigned app port |
+| `customer-ui` | `voyagevibes-flight-booking/customer-ui-docker-compose.yml` | `9001` | `9001` | Customer UI HTTPS entrypoint |
+| `corp-ui` | `voyagevibes-corp/corp-ui-docker-compose.yml` | `9002` | `9002` | Corp UI HTTPS entrypoint |
+
+## Planned App Ports
+
+| Service | Required port | Current status |
+|---|---|---|
+| `auth-service` | `8081` | aligned |
+| `flight-service` | `8082` | aligned |
+| `booking-service` | `8083` | aligned |
+| `customer-service` | `8084` | aligned |
+| `payment-service` | `8085` | aligned |
+| `notification-service` | `8086` | aligned |
+| `customer-ui` | `9001` | aligned |
+| `corp-ui` | `9002` | aligned |
+
+## Port Conflict Check
+
+- No published host-port conflicts were found across the current compose files.
+- The app services now publish only the planned ports `8081` through `8086`.
+- The UIs now publish only `9001` and `9002`.
+- Keycloak, Kong, databases, Kafka, and observability ports remain unchanged.
 
 ## Databases
 
@@ -154,8 +206,8 @@ The UI (nginx) emits JSON access logs to a shared volume and the collector inges
 
 ## UI Hostnames And TLS
 
-- `voyagevibes-flight-booking` serves on `https://customer-ui.voyagevibes.in:8080` using certs from `voyagevibes-flight-booking/https-certs`
-- `voyagevibes-corp` serves on `https://corp-ui.voyagevibes.in:8086` using certs from `voyagevibes-corp/https-certs`
+- `voyagevibes-flight-booking` serves on `https://customer-ui.voyagevibes.in:9001` using certs from `voyagevibes-flight-booking/https-certs`
+- `voyagevibes-corp` serves on `https://corp-ui.voyagevibes.in:9002` using certs from `voyagevibes-corp/https-certs`
 - Keycloak is exposed as `https://keycloak.voyagevibes.in:8091`
 
 Add these host mappings locally before testing:
@@ -175,27 +227,26 @@ https://keycloak.voyagevibes.in:8091/realms/voyagevibes-public/broker/google/end
 Google OAuth notes:
 
 - This redirect URI belongs in the Google OAuth client configuration, not the UI callback URL.
-- The public Keycloak client callback stays `https://customer-ui.voyagevibes.in:8080/auth/google/callback`.
-- The corp Keycloak client callback stays `https://corp-ui.voyagevibes.in:8086/corp/auth/callback`.
+- The public Keycloak client callback stays `https://customer-ui.voyagevibes.in:9001/auth/google/callback`.
+- The corp Keycloak client callback stays `https://corp-ui.voyagevibes.in:9002/corp/auth/callback`.
 
 ## Runtime Environment Conventions
 
 Shared listener conventions across services:
 
-- HTTP listener: `808X`
-- HTTPS listener: `909X`
+- App service ports: `8081` through `8086`
+- UI ports: `9001` and `9002`
+- Keycloak ports: `8090` and `8091`
+- Kong ports: `8000`, `8443`, and `8001`
 - Bind address: `0.0.0.0`
-- TLS env: `SERVER_SSL_ENABLED=true`
-- TLS env: `SERVER_SSL_CERTIFICATE=...` or keystore equivalent
-- TLS env: `SERVER_SSL_CERTIFICATE_PRIVATE_KEY=...` when PEM-based
 
 Service-specific compose wiring now includes:
 
-- `auth-service`: `AUTHSERVICE_HTTP_PORT`, `AUTHSERVICE_HTTPS_PORT`, `AUTHSERVICE_BIND_ADDRESS`, `SERVER_SSL_*`, `AUTH_DB_*`, Keycloak envs
-- `flight-service`: `HTTP_PORT`, `HTTPS_PORT`, `QUARKUS_HTTP_HOST`, `MYSQL_*`, `KAFKA_*`
-- `booking-service`: `HTTP_PORT`, `HTTPS_PORT`, `SERVER_SSL_*`, `KAFKA__*`, `EXTERNALSERVICES__FLIGHT__*`
-- `customer-service`: `HTTP_PORT`, `HTTPS_PORT`, `SERVER_HOST`, `SERVER_SSL_*`, `MONGODB_*`, `KAFKA_*`
-- `payment-service`: `HTTP_PORT`, `HTTPS_PORT`, `SERVER_HOST`, `SERVER_SSL_*`, `PAYMENT_DB_*`, `KAFKA_*`
+- `auth-service`: `AUTHSERVICE_HTTP_PORT`, `AUTHSERVICE_BIND_ADDRESS`, `AUTH_DB_*`, Keycloak envs
+- `flight-service`: `HTTP_PORT`, `QUARKUS_HTTP_HOST`, `MYSQL_*`, `KAFKA_*`
+- `booking-service`: `HTTP_PORT`, `KAFKA__*`, `EXTERNALSERVICES__FLIGHT__*`
+- `customer-service`: `HTTP_PORT`, `SERVER_HOST`, `MONGODB_*`, `KAFKA_*`
+- `payment-service`: `HTTP_PORT`, `SERVER_HOST`, `PAYMENT_DB_*`, `KAFKA_*`
 - `notification-service`: `HTTP_PORT`, `KAFKA_*`, `REDIS_*`, `POSTGRES_*`, `DEDUP_*`, `THROTTLE_*`, `RETRY_MAX_ATTEMPTS`, `EVENT_SOURCE`
 
 ## OpenTelemetry (Shared)
@@ -644,3 +695,6 @@ curl -k -i -H "Host: corp-api.voyagevibes.in" -H "Content-Type: application/json
 <!-- curl -i -X POST http://localhost:8001/services --data "name=auth-service" --data "url=http://auth-service:8081" && curl -i -X POST http://localhost:8001/services/auth-service/routes --data "name=customer-auth-api" --data "hosts[]=customer-api.voyagevibes.in" --data "paths[]=/api/v1/auth" --data "strip_path=false" && curl -i -X POST http://localhost:8001/services/auth-service/routes --data "name=corp-auth-api" --data "hosts[]=corp-api.voyagevibes.in" --data "paths[]=/api/v1/auth" --data "strip_path=false" && curl -i -X POST http://localhost:8001/services --data "name=flight-service" --data "url=http://flight-service:8082" && curl -i -X POST http://localhost:8001/services --data "name=booking-service" --data "url=http://booking-service:8083" && curl -i -X POST http://localhost:8001/services --data "name=customer-service" --data "url=http://customer-service:8084" && curl -i -X POST http://localhost:8001/services --data "name=payment-service" --data "url=http://payment-service:8085" && curl -i -X POST http://localhost:8001/services/flight-service/routes --data "name=customer-flight-api" --data "hosts[]=customer-api.voyagevibes.in" --data "paths[]=/api/v1/flights" --data "paths[]=/api/v1/pricing" --data "paths[]=/api/v1/inventory" --data "strip_path=false" && curl -i -X POST http://localhost:8001/services/booking-service/routes --data "name=customer-booking-api" --data "hosts[]=customer-api.voyagevibes.in" --data "paths[]=/api/v1/bookings" --data "strip_path=false" && curl -i -X POST http://localhost:8001/services/customer-service/routes --data "name=customer-profile-api" --data "hosts[]=customer-api.voyagevibes.in" --data "paths[]=/api/v1/users" --data "paths[]=/api/v1/notifications" --data "strip_path=false" && curl -i -X POST http://localhost:8001/services/payment-service/routes --data "name=customer-payment-api" --data "hosts[]=customer-api.voyagevibes.in" --data "paths[]=/api/v1/payments" --data "strip_path=false" && curl -i -X POST http://localhost:8001/services/flight-service/routes --data "name=corp-flight-api" --data "hosts[]=corp-api.voyagevibes.in" --data "paths[]=/api/v1/flights" --data "paths[]=/api/v1/pricing" --data "paths[]=/api/v1/inventory" --data "strip_path=false" && curl -i -X POST http://localhost:8001/services/booking-service/routes --data "name=corp-booking-api" --data "hosts[]=corp-api.voyagevibes.in" --data "paths[]=/api/v1/bookings" --data "strip_path=false" && curl -i -X POST http://localhost:8001/services/payment-service/routes --data "name=corp-payment-api" --data "hosts[]=corp-api.voyagevibes.in" --data "paths[]=/api/v1/payments" --data "strip_path=false" -->
 
 <!-- [text](../flight-booking/00-localtest-certs/notification.voyagevibes.in.pfx) [text](../flight-booking/00-localtest-certs/notification.voyagevibes.in.p12) [text](../flight-booking/00-localtest-certs/notification.voyagevibes.in.key.pem) [text](../flight-booking/00-localtest-certs/notification.voyagevibes.in.crt.pem) [text](../flight-booking/00-localtest-certs/notification.voyagevibes.in.cer) -->
+
+
+

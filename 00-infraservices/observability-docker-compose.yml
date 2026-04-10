@@ -20,23 +20,42 @@ services:
   prometheus:
     image: prom/prometheus:latest
     container_name: prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --web.enable-remote-write-receiver
+      - --enable-feature=exemplar-storage
+      - --enable-feature=native-histograms
     volumes:
       - ./observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
       - prometheus_data:/prometheus
     ports:
-      - "9091:9090"
+      - "9090:9090"
     networks:
       - flight-booking-network
 
   loki:
     image: docker.io/grafana/loki:latest
+    container_name: loki
     ports:
       - "3100:3100"
     networks:
       - flight-booking-network
     volumes:
-      - ./observability/loki/loki-config.yaml:/etc/loki/loki-config.yaml
+      - ./observability/loki/loki-config.yml:/etc/loki/loki-config.yaml
     command: -config.file=/etc/loki/loki-config.yaml
+
+  tempo:
+    image: grafana/tempo:latest
+    container_name: tempo
+    networks:
+      - flight-booking-network
+    command: ["-config.file=/etc/tempo.yaml"]
+    volumes:
+      - ./observability/tempo/tempo-config.yml:/etc/tempo.yaml
+    ports:
+      - "3200:3200" # Tempo HTTP API
+      - "4320:4317" # OTLP gRPC
+      - "4321:4318" # OTLP HTTP
 
   grafana:
     image: docker.io/grafana/grafana:latest
@@ -44,6 +63,10 @@ services:
     environment:
       - GF_SECURITY_ADMIN_USER=admin
       - GF_SECURITY_ADMIN_PASSWORD=admin
+      # - GF_AUTH_ANONYMOUS_ENABLED=true
+      # - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      # - GF_AUTH_DISABLE_LOGIN_FORM=true
+      # - GF_FEATURE_TOGGLES_ENABLE=traceqlEditor metricsSummary
     ports:
       - "3000:3000"
     volumes:

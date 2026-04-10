@@ -61,7 +61,7 @@ ensure_service "flight-service" "http://flight-service:8082"
 ensure_service "booking-service" "http://booking-service:8083"
 ensure_service "customer-service" "http://customer-service:8084"
 ensure_service "payment-service" "http://payment-service:8085"
-ensure_service "notification-service" "http://notification-service:8087"
+ensure_service "notification-service" "http://notification-service:8086"
 
 ensure_route "auth-service" "customer-auth-api" "customer-api.voyagevibes.in" "/api/v1/auth"
 ensure_route "flight-service" "customer-flight-api" "customer-api.voyagevibes.in" "/api/v1/flights" "/api/v1/pricing" "/api/v1/inventory"

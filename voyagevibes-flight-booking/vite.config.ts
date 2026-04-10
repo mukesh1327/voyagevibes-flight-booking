@@ -21,7 +21,7 @@ export default defineConfig({
   plugins: [react()],
   server: {
     host: 'customer-ui.voyagevibes.in',
-    port: 8080,
+    port: 9001,
     strictPort: true,
     https: httpsConfig,
     proxy: {

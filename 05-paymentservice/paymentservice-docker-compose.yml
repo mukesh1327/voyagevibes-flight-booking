@@ -14,9 +14,9 @@ services:
         until pg_isready -h platform_postgres -U $$POSTGRESQL_USER -d $$POSTGRESQL_DATABASE; do sleep 2; done;
         psql -h platform_postgres -U $$POSTGRESQL_USER -d $$POSTGRESQL_DATABASE -v ON_ERROR_STOP=1 -f /init/init-payment-db.sql
       "
-    depends_on:
-      platform_postgres:
-        condition: service_healthy
+    # depends_on:
+    #   platform_postgres:
+    #     condition: service_healthy
     volumes:
       - ./db:/init:ro
     networks:
@@ -34,10 +34,11 @@ services:
       - ./.env
     ports:
       - "8085:8085"
-      - "9095:9095"
     volumes:
       - ./https-certs:/app/https-certs:ro
     depends_on:
+      auth-service:
+        condition: service_started
       paymentservice_postgres_init:
         condition: service_completed_successfully
     networks:
@@ -49,3 +50,4 @@ networks:
   flight-booking-network:
     name: flight-booking-network
     driver: bridge
+

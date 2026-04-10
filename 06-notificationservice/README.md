@@ -19,7 +19,7 @@ go build -o out\notification-service.exe .\cmd\notificationservice
 .\out\notification-service.exe
 ```
 
-By default the service starts on `https://notification.voyagevibes.in:8087` using the certs in `https-certs`. You can override this with `HTTPS_ENABLED`, `TLS_CERT_FILE`, `TLS_KEY_FILE`, or `HTTP_HOST` if needed.
+By default the service starts on `https://notification.voyagevibes.in:8086` using the certs in `https-certs`. You can override this with `HTTPS_ENABLED`, `TLS_CERT_FILE`, `TLS_KEY_FILE`, or `HTTP_HOST` if needed.
 
 ## Swagger UI
 Once the service is running, Swagger UI is available at `/swagger/` and the OpenAPI document is served from `/swagger/openapi.json`.
@@ -29,7 +29,7 @@ The Containerfile expects a prebuilt binary at `out/notification-service`.
 ```bash
 go build -o out/notification-service ./cmd/notificationservice
 docker build -f docker/Containerfile -t notification-service:local .
-docker run --rm -p 8087:8087 --env-file .env notification-service:local
+docker run --rm -p 8086:8086 --env-file .env notification-service:local
 ```
 
 ## Docker Compose (includes Postgres + Redis)
