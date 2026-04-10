@@ -27,10 +27,10 @@ services:
 
 # Auth service
   auth-service:
-    image: quay.io/mukeshs1306/voyagevibes-authservice:latest
-    # build: 
-    #   context: .
-    #   dockerfile: ./docker/Containerfile.multistage
+    # image: quay.io/mukeshs1306/voyagevibes-authservice:latest
+    build: 
+      context: .
+      dockerfile: ./docker/Containerfile
     container_name: auth-service
     restart: always
     env_file:
@@ -45,6 +45,7 @@ services:
   
     ports:
       - "8081:8081"
+      - "7071:7071"
     volumes:
       - ./https-certs/authservice:/etc/ssl/https-certs:ro
     networks:

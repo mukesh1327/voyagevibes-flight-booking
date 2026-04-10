@@ -20,7 +20,7 @@ public class DualPortTomcatConfig {
             factory.setAddress(resolveAddress(bindAddress));
 
             int httpPort = resolvePort(environment.getProperty("AUTHSERVICE_HTTP_PORT"), 8081);
-            int httpsPort = resolvePort(environment.getProperty("AUTHSERVICE_HTTPS_PORT"), 9091);
+            int httpsPort = resolvePort(environment.getProperty("AUTHSERVICE_HTTPS_PORT"), 7071);
             boolean sslEnabled = Boolean.parseBoolean(
                 textOrDefault(environment.getProperty("SERVER_SSL_ENABLED"), environment.getProperty("server.ssl.enabled", "true"))
             );

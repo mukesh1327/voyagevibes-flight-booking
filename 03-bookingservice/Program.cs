@@ -76,7 +76,7 @@ builder.Services
 builder.Services.AddHostedService<KafkaEventConsumerService>();
 
 var httpPort = ParsePort(Environment.GetEnvironmentVariable("HTTP_PORT") ?? Environment.GetEnvironmentVariable("PORT"), 8083);
-var httpsPort = ParsePort(Environment.GetEnvironmentVariable("HTTPS_PORT"), 9093);
+var httpsPort = ParsePort(Environment.GetEnvironmentVariable("HTTPS_PORT"), 7073);
 var sslEnabled = bool.TryParse(Environment.GetEnvironmentVariable("SERVER_SSL_ENABLED"), out var sslFlag) && sslFlag;
 builder.WebHost.ConfigureKestrel(options =>
 {

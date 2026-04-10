@@ -33,6 +33,7 @@ services:
       - ./.env
     ports:
       - "8086:8086"
+      - "7076:7076"
     volumes:
       - ./https-certs:/app/https-certs:ro
     depends_on:

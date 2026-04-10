@@ -274,10 +274,10 @@ def resolve_server_config(env: Optional[Mapping[str, str]] = None):
     http_port = parsed_http_port if parsed_http_port > 0 else 8085
 
     try:
-        parsed_https_port = int(str(source.get("HTTPS_PORT", "9095")))
+        parsed_https_port = int(str(source.get("HTTPS_PORT", "7075")))
     except Exception:
-        parsed_https_port = 9095
-    https_port = parsed_https_port if parsed_https_port > 0 else 9095
+        parsed_https_port = 7075
+    https_port = parsed_https_port if parsed_https_port > 0 else 7075
 
     ssl_enabled = _parse_bool(source.get("SERVER_SSL_ENABLED", source.get("HTTPS_ENABLED")), False)
     listen_host = str(source.get("SERVER_HOST", source.get("LISTEN_HOST", "0.0.0.0"))).strip() or "0.0.0.0"

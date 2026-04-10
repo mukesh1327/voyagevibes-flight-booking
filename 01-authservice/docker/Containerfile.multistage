@@ -2,8 +2,9 @@
 FROM registry.redhat.io/ubi9/openjdk-17@sha256:615a2e789a3b2d982ec9e126d525697032440b1eace5dfea4fe6618cc85a7935 AS builder
 
 WORKDIR /build
-COPY pom.xml .
-COPY src ./src
+
+COPY ./pom.xml .
+COPY ./src ./src
 
 RUN mvn clean package -DskipTests
 
@@ -14,6 +15,6 @@ WORKDIR /app
 
 COPY --from=builder /build/target/authservice-0.0.1-SNAPSHOT.jar app.jar
 
-EXPOSE 8081
+EXPOSE 8081 7071
 
 ENTRYPOINT ["java", "-jar", "app.jar"]

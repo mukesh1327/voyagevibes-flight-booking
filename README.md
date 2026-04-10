@@ -18,19 +18,19 @@ podman compose -f docker-compose.yml up -d
 # Build & push apps in podman
 CONTAINER_REPO=quay.io
 CONTAINER_USERSPACE=mukeshs1306
-APP_VERSION=v1.002
+APP_VERSION=v1.003
 
-podman build -t $CONTAINER_REPO/$CONTAINER_USERSPACE/voyagevibes-authservice:$APP_VERSION -f 01-authservice/docker/Containerfile 01-authservice/
+podman build -t $CONTAINER_REPO/$CONTAINER_USERSPACE/voyagevibes-authservice:$APP_VERSION -f 01-authservice/docker/Containerfile 01-authservice/ && podman push $CONTAINER_REPO/$CONTAINER_USERSPACE/voyagevibes-authservice:$APP_VERSION
 
-podman build -t $CONTAINER_REPO/$CONTAINER_USERSPACE/voyagevibes-flightservice:$APP_VERSION -f 02-flightservice/src/main/docker/Dockerfile.jvm 02-flightservice/
+podman build -t $CONTAINER_REPO/$CONTAINER_USERSPACE/voyagevibes-flightservice:$APP_VERSION -f 02-flightservice/src/main/docker/Dockerfile.jvm 02-flightservice/ && podman push $CONTAINER_REPO/$CONTAINER_USERSPACE/voyagevibes-flightservice:$APP_VERSION
 
-podman build -t $CONTAINER_REPO/$CONTAINER_USERSPACE/voyagevibes-bookingservice:$APP_VERSION -f 03-bookingservice/docker/Containerfile 03-bookingservice/
+podman build -t $CONTAINER_REPO/$CONTAINER_USERSPACE/voyagevibes-bookingservice:$APP_VERSION -f 03-bookingservice/docker/Containerfile 03-bookingservice/ && podman push $CONTAINER_REPO/$CONTAINER_USERSPACE/voyagevibes-bookingservice:$APP_VERSION
 
-podman build -t $CONTAINER_REPO/$CONTAINER_USERSPACE/voyagevibes-customerservice:$APP_VERSION -f 04-customerservice/docker/Containerfile 04-customerservice/
+podman build -t $CONTAINER_REPO/$CONTAINER_USERSPACE/voyagevibes-customerservice:$APP_VERSION -f 04-customerservice/docker/Containerfile 04-customerservice/ && podman push $CONTAINER_REPO/$CONTAINER_USERSPACE/voyagevibes-customerservice:$APP_VERSION
 
-podman build -t $CONTAINER_REPO/$CONTAINER_USERSPACE/voyagevibes-paymentservice:$APP_VERSION -f 05-paymentservice/docker/Containerfile 05-paymentservice/
+podman build -t $CONTAINER_REPO/$CONTAINER_USERSPACE/voyagevibes-paymentservice:$APP_VERSION -f 05-paymentservice/docker/Containerfile 05-paymentservice/ && podman push $CONTAINER_REPO/$CONTAINER_USERSPACE/voyagevibes-paymentservice:$APP_VERSION
 
-podman build -t $CONTAINER_REPO/$CONTAINER_USERSPACE/voyagevibes-notificationservice:$APP_VERSION -f 06-notificationservice/docker/Containerfile 06-notificationservice/
+podman build -t $CONTAINER_REPO/$CONTAINER_USERSPACE/voyagevibes-notificationservice:$APP_VERSION -f 06-notificationservice/docker/Containerfile 06-notificationservice/ && podman push $CONTAINER_REPO/$CONTAINER_USERSPACE/voyagevibes-notificationservice:$APP_VERSION
 ```
 
 ```shell

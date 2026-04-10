@@ -191,7 +191,7 @@ public interface PublicAuthApi {
                 "db.reason": "OK",
                 "db.target": "jdbc:postgresql://localhost:5432/authdb",
                 "hostname": "localhost",
-                "appBaseUrl": "https://localhost:9091",
+                "appBaseUrl": "https://localhost:7071",
                 "environment": "dev"
               }
             }

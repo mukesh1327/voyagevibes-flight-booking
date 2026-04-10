@@ -123,39 +123,73 @@ func main() {
 		handler = observability.WrapHandler(handler, "notification-service")
 	}
 
-	addr := fmt.Sprintf(":%d", cfg.HttpPort)
-	if cfg.HttpHost != "" {
-		addr = fmt.Sprintf("%s:%d", cfg.HttpHost, cfg.HttpPort)
+	type serverBinding struct {
+		scheme   string
+		server   *http.Server
+		certFile string
+		keyFile  string
 	}
 
-	server := &http.Server{
-		Addr:    addr,
+	httpServer := &http.Server{
+		Addr:    formatAddr(cfg.HttpHost, cfg.HttpPort),
 		Handler: handler,
 	}
 
-	go func() {
-		scheme := "http"
-		if cfg.HttpsEnabled {
-			scheme = "https"
-		}
-		logger.Printf("notification-service %s listening on %s", scheme, addr)
+	bindings := []serverBinding{
+		{
+			scheme: "http",
+			server: httpServer,
+		},
+	}
 
-		var err error
-		if cfg.HttpsEnabled {
-			err = server.ListenAndServeTLS(cfg.TlsCertFile, cfg.TlsKeyFile)
-		} else {
-			err = server.ListenAndServe()
-		}
+	if cfg.HttpsEnabled {
+		bindings = append(bindings, serverBinding{
+			scheme:   "https",
+			server:   &http.Server{Addr: formatAddr(cfg.HttpHost, cfg.HttpsPort), Handler: handler},
+			certFile: cfg.TlsCertFile,
+			keyFile:  cfg.TlsKeyFile,
+		})
+	}
 
-		if err != nil && !errors.Is(err, http.ErrServerClosed) {
-			logger.Fatalf("http server error: %v", err)
-		}
-	}()
+	errCh := make(chan error, len(bindings))
+	for _, binding := range bindings {
+		go func(binding serverBinding) {
+			logger.Printf("notification-service %s listening on %s", binding.scheme, binding.server.Addr)
 
-	<-ctx.Done()
+			var err error
+			if binding.scheme == "https" {
+				err = binding.server.ListenAndServeTLS(binding.certFile, binding.keyFile)
+			} else {
+				err = binding.server.ListenAndServe()
+			}
+
+			if err != nil && !errors.Is(err, http.ErrServerClosed) {
+				errCh <- fmt.Errorf("%s server error: %w", binding.scheme, err)
+			}
+		}(binding)
+	}
+
+	select {
+	case <-ctx.Done():
+	case err := <-errCh:
+		logger.Printf("%v", err)
+		stop()
+		<-ctx.Done()
+	}
 
 	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer shutdownCancel()
-	_ = server.Shutdown(shutdownCtx)
+	for _, binding := range bindings {
+		if err := binding.server.Shutdown(shutdownCtx); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			logger.Printf("shutdown error for %s server: %v", binding.scheme, err)
+		}
+	}
 	wg.Wait()
+}
+
+func formatAddr(host string, port int) string {
+	if host != "" {
+		return fmt.Sprintf("%s:%d", host, port)
+	}
+	return fmt.Sprintf(":%d", port)
 }

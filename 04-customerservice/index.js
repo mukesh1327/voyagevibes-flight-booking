@@ -53,8 +53,8 @@ function parseBoolean(value, defaultValue) {
 function resolveServerConfig(env) {
   const parsedHttpPort = Number(env.HTTP_PORT || env.PORT || env.SERVER_PORT || 8084);
   const httpPort = Number.isFinite(parsedHttpPort) && parsedHttpPort > 0 ? parsedHttpPort : 8084;
-  const parsedHttpsPort = Number(env.HTTPS_PORT || 9094);
-  const httpsPort = Number.isFinite(parsedHttpsPort) && parsedHttpsPort > 0 ? parsedHttpsPort : 9094;
+  const parsedHttpsPort = Number(env.HTTPS_PORT || 7074);
+  const httpsPort = Number.isFinite(parsedHttpsPort) && parsedHttpsPort > 0 ? parsedHttpsPort : 7074;
   const sslEnabled = parseBoolean(env.SERVER_SSL_ENABLED ?? env.HTTPS_ENABLED, false);
   const listenHost = env.SERVER_HOST || env.LISTEN_HOST || '0.0.0.0';
   const publicHost = normalizeHost(env.PUBLIC_HOST || env.PUBLIC_BASE_URL || env.SERVICE_PUBLIC_URL, 'customer.voyagevibes.in');
