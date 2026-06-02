@@ -5,8 +5,9 @@
 00-infraservices/gateway/kong/.env
 00-infraservices/databases/postgres/.env
 
+00-infraservices/keycloak/realms/*
 
-#######
+#############################################################
 
 HELP.md
 target/
