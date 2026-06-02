@@ -1,0 +1,60 @@
+services:
+
+# =============== Keycloak - Postgres Init ===========================
+
+  keycloak_postgres_init:
+    image: registry.redhat.io/rhel9/postgresql-16:latest
+    container_name: keycloak_postgres_init
+    restart: "no"
+    env_file:
+      - ./.env
+    command: >
+      sh -ec "
+        until pg_isready -h platform_postgres -U $$POSTGRESQL_USER -d $$POSTGRESQL_DATABASE; do sleep 2; done;
+        psql -h platform_postgres -U $$POSTGRESQL_USER -d $$POSTGRESQL_DATABASE  -v ON_ERROR_STOP=1 -f /init/keycloak-init.sql
+      "
+    depends_on:
+      platform_postgres:
+        condition: service_healthy
+    volumes:
+      - ./init-db:/init:ro
+    networks:
+      - flight-booking-network
+
+# =============== Keycloak ===========================
+
+  keycloak:
+    container_name: keycloak
+    image: registry.redhat.io/rhbk/keycloak-rhel9:26.2-15
+    restart: always
+    env_file:
+      - ./.env
+    ports:
+      - "8090:8080"
+      - "8091:8443"
+    command:
+      - start
+      - --import-realm
+    healthcheck:
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/localhost/8080"]
+      interval: 60s
+      timeout: 30s
+      retries: 5
+      start_period: 60s
+    depends_on:
+      platform_postgres:
+        condition: service_healthy
+      keycloak_postgres_init:
+        condition: service_completed_successfully
+    volumes:
+      - ./realms:/opt/keycloak/data/import:ro
+      - ./ssl-certs:/opt/keycloak/certs:ro
+    networks:
+      - flight-booking-network
+
+# ================= Network ========================
+
+networks:
+  flight-booking-network:
+    name: flight-booking-network
+    driver: bridge

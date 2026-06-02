@@ -1,0 +1,331 @@
+openapi: 3.0.3
+info:
+  title: Flight Booking Authentication Service
+  version: v1
+  description: |
+    Authentication service for the Flight Booking platform.
+    Customer users authenticate through Google via Keycloak identity brokering.
+    Corporate users authenticate through Keycloak federation such as LDAP or external SSO.
+servers:
+  - url: http://localhost:8081
+security:
+  - bearerAuth: []
+tags:
+  - name: Authentication
+  - name: Operational
+paths:
+  /auth/frontend-config:
+    get:
+      tags: [Authentication]
+      summary: Return public frontend login configuration
+      security: []
+      responses:
+        '200':
+          description: Frontend login bootstrap data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthFrontendConfigResponse'
+  /auth/customer/register:
+    post:
+      tags: [Authentication]
+      summary: Register a customer using a Keycloak authorization code
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            example:
+              authorizationCode: "sample-auth-code"
+              redirectUri: "http://localhost:8081/swagger-ui/oauth2-redirect.html"
+              codeVerifier: "pkce-code-verifier"
+            schema:
+              $ref: '#/components/schemas/AuthCodeExchangeRequest'
+      responses:
+        '201':
+          description: Customer registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthTokenResponse'
+        '401':
+          description: Invalid authorization code
+  /auth/customer/login:
+    post:
+      tags: [Authentication]
+      summary: Login a customer using a Keycloak authorization code
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthCodeExchangeRequest'
+      responses:
+        '200':
+          description: Customer logged in
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthTokenResponse'
+  /auth/customer/logout:
+    post:
+      tags: [Authentication]
+      summary: Logout a customer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            example:
+              refreshToken: "sample-refresh-token"
+            schema:
+              $ref: '#/components/schemas/LogoutRequest'
+      responses:
+        '200':
+          description: Logout accepted
+  /auth/customer/{id}:
+    delete:
+      tags: [Authentication]
+      summary: Delete a customer user
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Customer deleted
+        '403':
+          description: Not allowed to delete this user
+  /auth/corporate/login:
+    post:
+      tags: [Authentication]
+      summary: Login a corporate user using a Keycloak authorization code
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthCodeExchangeRequest'
+      responses:
+        '200':
+          description: Corporate user logged in
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthTokenResponse'
+  /auth/corporate/logout:
+    post:
+      tags: [Authentication]
+      summary: Logout a corporate user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LogoutRequest'
+      responses:
+        '200':
+          description: Logout accepted
+  /auth/me:
+    get:
+      tags: [Authentication]
+      summary: Return the current user from the Bearer token
+      responses:
+        '200':
+          description: Authenticated user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthenticatedUserResponse'
+        '401':
+          description: Missing or invalid Bearer token
+  /health:
+    get:
+      tags: [Operational]
+      summary: Operational health endpoint
+      security: []
+      responses:
+        '200':
+          description: Service is operational and both DB and Keycloak are reachable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+        '503':
+          description: Service is not operational because DB or Keycloak is unreachable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    AuthCodeExchangeRequest:
+      type: object
+      required: [authorizationCode]
+      properties:
+        authorizationCode:
+          type: string
+        redirectUri:
+          type: string
+        codeVerifier:
+          type: string
+    LogoutRequest:
+      type: object
+      required: [refreshToken]
+      properties:
+        refreshToken:
+          type: string
+    CustomerProfileResponse:
+      type: object
+      properties:
+        keycloakUserId:
+          type: string
+        email:
+          type: string
+        fullName:
+          type: string
+        identityProvider:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    AuthenticatedUserResponse:
+      type: object
+      properties:
+        subject:
+          type: string
+        username:
+          type: string
+        email:
+          type: string
+        fullName:
+          type: string
+        roles:
+          type: array
+          items:
+            type: string
+        baseRole:
+          type: string
+        corporateRoles:
+          type: array
+          items:
+            type: string
+        userType:
+          type: string
+        identityProvider:
+          type: string
+        issuer:
+          type: string
+        active:
+          type: boolean
+    AuthFrontendConfigResponse:
+      type: object
+      properties:
+        realm:
+          type: string
+        issuer:
+          type: string
+        clientId:
+          type: string
+        authorizationEndpoint:
+          type: string
+        tokenEndpoint:
+          type: string
+        logoutEndpoint:
+          type: string
+        defaultRedirectUri:
+          type: string
+        scope:
+          type: string
+        responseType:
+          type: string
+        pkceRequired:
+          type: boolean
+        codeChallengeMethod:
+          type: string
+        customer:
+          $ref: '#/components/schemas/LoginFlowConfig'
+        corporate:
+          $ref: '#/components/schemas/LoginFlowConfig'
+        corporateRoleCatalog:
+          type: array
+          items:
+            $ref: '#/components/schemas/CorporateRoleDescriptor'
+    LoginFlowConfig:
+      type: object
+      properties:
+        audience:
+          type: string
+        exchangeEndpoint:
+          type: string
+        registrationEndpoint:
+          type: string
+        requiredBaseRole:
+          type: string
+        identityProviderHint:
+          type: string
+        supportsSelfRegistration:
+          type: boolean
+        authorizationParameters:
+          type: object
+          additionalProperties:
+            type: string
+    CorporateRoleDescriptor:
+      type: object
+      properties:
+        code:
+          type: string
+        displayName:
+          type: string
+        description:
+          type: string
+    AuthTokenResponse:
+      type: object
+      properties:
+        tokenType:
+          type: string
+        expiresIn:
+          type: integer
+          format: int64
+        scope:
+          type: string
+        userType:
+          type: string
+        newlyRegistered:
+          type: boolean
+        accessToken:
+          type: string
+        refreshToken:
+          type: string
+        idToken:
+          type: string
+        user:
+          $ref: '#/components/schemas/AuthenticatedUserResponse'
+        customerProfile:
+          $ref: '#/components/schemas/CustomerProfileResponse'
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+        service:
+          type: string
+        port:
+          type: integer
+        operational:
+          type: boolean
+        components:
+          type: object
+          additionalProperties:
+            type: string

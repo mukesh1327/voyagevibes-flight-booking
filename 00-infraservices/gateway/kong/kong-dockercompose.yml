@@ -1,0 +1,86 @@
+services:
+
+  kong_postgres_init:
+    image: registry.redhat.io/rhel9/postgresql-16:latest
+    container_name: kong_postgres_init
+    restart: "no"
+    env_file:
+      - ./.env
+    command: >
+      sh -ec "
+        until pg_isready -h platform_postgres -U $$POSTGRESQL_USER -d $$POSTGRESQL_DATABASE; do sleep 2; done;
+        psql -h platform_postgres -U $$POSTGRESQL_USER -d $$POSTGRESQL_DATABASE -v ON_ERROR_STOP=1 -f /init/db-init.sql
+      "
+    depends_on:
+      platform_postgres:
+        condition: service_healthy
+    volumes:
+      - ./init-db:/init:ro
+    networks:
+      - flight-booking-network
+
+  kong-migrations:
+    image: docker.io/library/kong
+    command: >
+      /bin/sh -c
+      "kong migrations bootstrap --vv ||
+      (kong migrations up --vv && kong migrations finish --vv)"
+    env_file:
+      - ./.env
+    volumes:
+      - ./ssl-certs:/etc/kong/certs:ro
+    depends_on:
+      platform_postgres:
+        condition: service_healthy
+      kong_postgres_init:
+        condition: service_completed_successfully
+    networks:
+      - flight-booking-network
+
+# -----------
+
+  kong_gateway:
+    image: docker.io/library/kong
+    container_name: kong_voyagevibes_gateway
+    env_file:
+      - ./.env
+    ports:
+      - "8000:8000"  # Proxy (your services entrypoint)
+      - "8443:8443"  # HTTPS
+      - "8001:8001"  # Admin API
+    volumes:
+      - ./ssl-certs:/etc/kong/certs:ro
+    depends_on:
+      platform_postgres:
+        condition: service_healthy
+      kong_postgres_init:
+        condition: service_completed_successfully
+      kong-migrations:
+        condition: service_completed_successfully
+    networks:
+      - flight-booking-network
+
+  kong-routes-init:
+    image: registry.redhat.io/openshift4/network-tools-rhel9:v4.19
+    restart: "no"
+    command: ["/bin/bash", "/opt/bootstrap/register-kong-routes.sh"]
+    environment:
+      KONG_ADMIN_BASE_URL: http://kong_gateway:8001
+      AUTH_SERVICE_RUNTIME: ${AUTH_SERVICE_RUNTIME:-production}
+      AUTH_SERVICE_URL: ${AUTH_SERVICE_URL:-}
+      AUTH_SERVICE_DEV_URL: ${AUTH_SERVICE_DEV_URL:-http://host.containers.internal:8081}
+      AUTH_SERVICE_PROD_URL: ${AUTH_SERVICE_PROD_URL:-http://auth-service:8081/auth}
+    depends_on:
+      kong_gateway:
+        condition: service_started
+    volumes:
+      - ./api-init/register-kong-routes.sh:/opt/bootstrap/register-kong-routes.sh:ro
+    networks:
+      - flight-booking-network
+
+# ================= Network ========================
+
+networks:
+  flight-booking-network:
+    name: flight-booking-network
+    driver: bridge

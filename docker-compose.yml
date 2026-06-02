@@ -1,0 +1,15 @@
+# services:
+
+include:
+
+# Databases
+  - ./00-infraservices/databases/postgres/postgres-dockercompose.yml
+
+# Infra services
+  - ./00-infraservices/keycloak/keycloak-dockercompose.yml
+
+# Gateway
+  - ./00-infraservices/gateway/kong/kong-dockercompose.yml
+
+# Authservice
+  - ./01-authservice/authservice-dockercompose.yml

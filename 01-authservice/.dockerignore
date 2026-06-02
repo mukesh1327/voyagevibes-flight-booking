@@ -1,0 +1,7 @@
+target/*
+!target/authservice-0.0.1-SNAPSHOT.jar
+.git
+.idea
+.vscode
+*.iml
+README.md.bak

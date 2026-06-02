@@ -1,0 +1,111 @@
+spring:
+  application:
+    name: authservice
+  datasource:
+    url: ${DB_URL:jdbc:h2:mem:authdb;MODE=PostgreSQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE}
+    username: ${DB_USERNAME:sa}
+    password: ${DB_PASSWORD:}
+    driver-class-name: ${DB_DRIVER_CLASS_NAME:org.h2.Driver}
+    hikari:
+      # Test-specific HikariCP configuration
+      minimum-idle: 1
+      maximum-pool-size: 2
+      connection-timeout: 10000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+      # Disable leak detection for tests to avoid housekeeper warnings
+      leak-detection-threshold: 0
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        format_sql: false
+  flyway:
+    enabled: true
+  h2:
+    console:
+      enabled: false
+
+server:
+  port: ${SERVER_PORT:8081}
+  shutdown: graceful
+  forward-headers-strategy: framework
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: when_authorized
+      group:
+        liveness:
+          include: livenessState
+        readiness:
+          include: db,keycloak
+        operational:
+          include: db,keycloak
+  health:
+    livenessstate:
+      enabled: true
+    readinessstate:
+      enabled: true
+
+logging:
+  level:
+    root: WARN
+    in.cloudxplorer.authservice: INFO
+    com.zaxxer.hikari: ERROR
+  pattern:
+    console: "%d{yyyy-MM-dd'T'HH:mm:ss.SSSXXX} level=%-5p service=${spring.application.name} trace=%X{traceId:-} span=%X{spanId:-} logger=%logger{36} message=%msg%n"
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui
+    display-request-duration: true
+    try-it-out-enabled: true
+    urls-primary-name: customer
+    urls:
+      - name: customer
+        url: /v3/api-docs/customer
+      - name: corporate
+        url: /v3/api-docs/corporate
+      - name: operations
+        url: /v3/api-docs/operations
+  api-docs:
+    path: /v3/api-docs
+
+app:
+  keycloak:
+    base-url: ${KEYCLOAK_URL:http://localhost:8090}
+    realm: ${KEYCLOAK_REALM:flight-booking}
+    client-id: ${KEYCLOAK_CLIENT_ID:flight-auth-service}
+    client-secret: ${KEYCLOAK_CLIENT_SECRET:PublicApiSecret123$}
+    admin-client-id: ${KEYCLOAK_ADMIN_CLIENT_ID:flight-auth-service}
+    admin-client-secret: ${KEYCLOAK_ADMIN_CLIENT_SECRET:CorpWebSecret123$}
+    default-redirect-uri: ${KEYCLOAK_DEFAULT_REDIRECT_URI:http://localhost:8081/swagger-ui/oauth2-redirect.html}
+    google-provider-alias: ${KEYCLOAK_GOOGLE_PROVIDER_ALIAS:google}
+    authorization-scope: ${KEYCLOAK_AUTHORIZATION_SCOPE:openid profile email}
+    authorization-response-type: ${KEYCLOAK_AUTHORIZATION_RESPONSE_TYPE:code}
+    pkce-code-challenge-method: ${KEYCLOAK_PKCE_CODE_CHALLENGE_METHOD:S256}
+    connect-timeout: ${KEYCLOAK_CONNECT_TIMEOUT:5s}
+    read-timeout: ${KEYCLOAK_READ_TIMEOUT:5s}
+  security:
+    jwt:
+      issuer: ${JWT_ISSUER:http://localhost:8080/realms/flight-booking}
+  observability:
+    service-name: ${OBSERVABILITY_SERVICE_NAME:authservice}
+    telemetry:
+      trace:
+        enabled: ${OTEL_TRACES_EXPORTER_ENABLED:false}
+      metrics:
+        enabled: ${OTEL_METRICS_EXPORT_ENABLED:false}
+      logs:
+        enabled: ${OTEL_LOGS_EXPORTER_ENABLED:false}
+  logging:
+    file-path: ${LOGGING_FILE_PATH:logs/authservice.log}

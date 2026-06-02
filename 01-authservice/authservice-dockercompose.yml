@@ -1,0 +1,56 @@
+services:
+
+# ================= Auth Service ========================
+
+  auth_postgres_init:
+    image: registry.redhat.io/rhel9/postgresql-16:latest
+    container_name: auth_postgres_init
+    restart: "no"
+    env_file:
+      - ../00-infraservices/databases/postgres/.env
+    command: >
+      sh -ec "
+        until pg_isready -h platform_postgres -U $$POSTGRESQL_USER -d $$POSTGRESQL_DATABASE; do sleep 2; done;
+        psql -h platform_postgres -U $$POSTGRESQL_USER -d $$POSTGRESQL_DATABASE -v ON_ERROR_STOP=1 -f /init/auth-init.sql
+      "
+    depends_on:
+      platform_postgres:
+        condition: service_healthy
+    volumes:
+      - ./init-db:/init:ro
+    networks:
+      - flight-booking-network
+
+  auth-service:
+    # image: quay.io/mukeshs1306/voyagevibes-authservice:latest
+    build: 
+      context: .
+      dockerfile: ./src/docker/Containerfile
+    container_name: auth-service
+    restart: always
+    env_file:
+      - ./.env
+    environment:
+      KEYCLOAK_URL: ${AUTH_SERVICE_KEYCLOAK_URL:-http://keycloak:8080}
+      DB_URL: ${AUTH_SERVICE_DB_URL:-jdbc:postgresql://platform_postgres:5432/authdb?sslmode=disable}
+    depends_on:
+      keycloak:
+        condition: service_healthy
+      platform_postgres:
+        condition: service_healthy
+      auth_postgres_init:
+        condition: service_completed_successfully
+  
+    ports:
+      - "${AUTH_SERVICE_HOST_PORT:-8081}:8081"
+      - "7071:7071"
+
+    networks:
+      - flight-booking-network
+
+# ================= Network ========================
+
+networks:
+  flight-booking-network:
+    name: flight-booking-network
+    driver: bridge

@@ -1,0 +1,147 @@
+spring:
+  application:
+    name: authservice
+  datasource:
+    url: ${DB_URL:jdbc:h2:mem:authdb;MODE=PostgreSQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE}
+    username: ${DB_USERNAME:sa}
+    password: ${DB_PASSWORD:}
+    driver-class-name: ${DB_DRIVER_CLASS_NAME:org.h2.Driver}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        format_sql: false
+  flyway:
+    enabled: true
+  h2:
+    console:
+      enabled: false
+
+server:
+  port: ${SERVER_PORT:8081}
+  shutdown: graceful
+  forward-headers-strategy: framework
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+  otlp:
+    metrics:
+      export:
+        enabled: ${OTEL_METRICS_EXPORT_ENABLED:false}
+        url: ${OTEL_EXPORTER_OTLP_METRICS_ENDPOINT:http://localhost:4318/v1/metrics}
+        step: ${OTEL_METRICS_EXPORT_STEP:1m}
+
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: when_authorized
+      group:
+        liveness:
+          include: livenessState
+        readiness:
+          include: db,keycloak
+        operational:
+          include: db,keycloak
+
+  health:
+    livenessstate:
+      enabled: true
+    readinessstate:
+      enabled: true
+
+logging:
+  level:
+    root: INFO
+    in.cloudxplorer.authservice: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd'T'HH:mm:ss.SSSXXX} level=%-5p service=${spring.application.name} trace=%X{traceId:-} span=%X{spanId:-} logger=%logger{36} message=%msg%n"
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui
+    display-request-duration: true
+    try-it-out-enabled: true
+    urls-primary-name: customer
+    urls:
+      - name: customer
+        url: /v3/api-docs/customer
+      - name: corporate
+        url: /v3/api-docs/corporate
+      - name: operations
+        url: /v3/api-docs/operations
+  api-docs:
+    path: /v3/api-docs
+
+app:
+  keycloak:
+    base-url: ${KEYCLOAK_URL:https://keycloak.voyagevibes.in:8091}
+    realm: ${KEYCLOAK_REALM:flight-booking}
+    client-id: ${KEYCLOAK_CLIENT_ID:flight-auth-service}
+    client-secret: ${KEYCLOAK_CLIENT_SECRET:PublicApiSecret123$}
+    admin-client-id: ${KEYCLOAK_ADMIN_CLIENT_ID:flight-auth-service}
+    admin-client-secret: ${KEYCLOAK_ADMIN_CLIENT_SECRET:CorpWebSecret123$}
+    default-redirect-uri: ${KEYCLOAK_DEFAULT_REDIRECT_URI:http://localhost:8081/swagger-ui/oauth2-redirect.html}
+    google-provider-alias: ${KEYCLOAK_GOOGLE_PROVIDER_ALIAS:google}
+    authorization-scope: ${KEYCLOAK_AUTHORIZATION_SCOPE:openid profile email}
+    authorization-response-type: ${KEYCLOAK_AUTHORIZATION_RESPONSE_TYPE:code}
+    pkce-code-challenge-method: ${KEYCLOAK_PKCE_CODE_CHALLENGE_METHOD:S256}
+    connect-timeout: ${KEYCLOAK_CONNECT_TIMEOUT:5s}
+    read-timeout: ${KEYCLOAK_READ_TIMEOUT:5s}
+    trust-store-path: ${KEYCLOAK_TRUST_STORE_PATH:e:/voyagevibes/00-infraservices/keycloak/ssl-certs/keycloak.voyagevibes.in.p12}
+    trust-store-password: ${KEYCLOAK_TRUST_STORE_PASSWORD:changeit}
+    trust-store-type: ${KEYCLOAK_TRUST_STORE_TYPE:PKCS12}
+  security:
+    customer-role: ${APP_CUSTOMER_ROLE:customer}
+    corporate-role: ${APP_CORPORATE_ROLE:corporate}
+    admin-role: ${APP_ADMIN_ROLE:admin}
+    cors:
+      allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:8080}
+    corporate-sub-roles:
+      - code: support-desk
+        display-name: Support Desk
+        description: Workforce agents handling payment, refund, and booking support queries.
+      - code: booking-ops
+        display-name: Booking Operations
+        description: Operations staff managing itinerary corrections, cancellations, and reissues.
+      - code: finance-ops
+        display-name: Finance Operations
+        description: Teams responsible for reconciliation, refunds, and chargeback review.
+      - code: flight-admin
+        display-name: Flight Admin
+        description: Administrators updating schedules, routes, and flight inventory.
+      - code: pricing-analyst
+        display-name: Pricing Analyst
+        description: Analysts reviewing fares, campaign performance, and commercial trends.
+      - code: corporate-travel-manager
+        display-name: Corporate Travel Manager
+        description: B2B account managers supporting enterprise travel customers.
+      - code: reporting-analyst
+        display-name: Reporting Analyst
+        description: Read-only users for reporting, analytics, and audit workflows.
+      - code: super-admin
+        display-name: Super Admin
+        description: Privileged platform administrators with elevated operational access.
+
+  observability:
+    service-name: ${OTEL_SERVICE_NAME:${spring.application.name}}
+    service-namespace: ${OTEL_SERVICE_NAMESPACE:voyagevibes}
+    telemetry:
+      trace:
+        enabled: ${OTEL_TRACING_EXPORT_ENABLED:false}
+        endpoint: ${OTEL_EXPORTER_OTLP_TRACES_ENDPOINT:http://localhost:4318/v1/traces}
+        timeout: ${OTEL_TRACING_TIMEOUT:10s}
+      logs:
+        enabled: ${OTEL_LOGS_EXPORT_ENABLED:false}
+        endpoint: ${OTEL_EXPORTER_OTLP_LOGS_ENDPOINT:http://localhost:4318/v1/logs}
+        timeout: ${OTEL_LOGS_TIMEOUT:10s}
+        transport: ${OTEL_LOGS_TRANSPORT:http}
+
+  logging:
+    file-path: ${APP_LOG_FILE_PATH:logs/authservice.log}
