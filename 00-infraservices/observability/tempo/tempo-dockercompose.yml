@@ -1,0 +1,19 @@
+services:
+
+  tempo:
+    image: grafana/tempo:latest
+    container_name: tempo
+    networks:
+      - flight-booking-network
+    command: ["-config.file=/etc/tempo.yaml"]
+    volumes:
+      - ./config/tempo-config.yml:/etc/tempo.yaml:ro,Z
+    ports:
+      - "3200:3200" # Tempo HTTP API
+      - "4320:4317" # OTLP gRPC
+      - "4321:4318" # OTLP HTTP
+
+networks:
+  flight-booking-network:
+    name: flight-booking-network
+    driver: bridge

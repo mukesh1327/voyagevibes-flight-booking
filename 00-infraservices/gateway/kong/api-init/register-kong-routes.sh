@@ -4,7 +4,7 @@ set -euo pipefail
 admin_base_url="${KONG_ADMIN_BASE_URL:-http://kong_gateway:8001}"
 auth_service_runtime="${AUTH_SERVICE_RUNTIME:-development}"
 auth_service_port="${AUTH_SERVICE_PORT:-8081}"
-auth_service_dev_url="${AUTH_SERVICE_DEV_URL:-http://host.containers.internal:${auth_service_port}}"
+auth_service_dev_url="${AUTH_SERVICE_DEV_URL:-http://host.containers.internal:${auth_service_port}/auth}"
 auth_service_prod_url="${AUTH_SERVICE_PROD_URL:-http://auth-service:${auth_service_port}/auth}"
 customer_api_host="${CUSTOMER_API_HOST:-customer-api.voyagevibes.in}"
 corporate_api_host="${CORPORATE_API_HOST:-corp-api.voyagevibes.in}"
@@ -17,23 +17,31 @@ wait_for_kong() {
 }
 
 resolve_auth_service_url() {
+  local configured_url
+
   if [[ -n "${AUTH_SERVICE_URL:-}" ]]; then
-    echo "${AUTH_SERVICE_URL}"
-    return
+    configured_url="${AUTH_SERVICE_URL}"
+  else
+    case "${auth_service_runtime}" in
+      development)
+        configured_url="${auth_service_dev_url}"
+        ;;
+      production)
+        configured_url="${auth_service_prod_url}"
+        ;;
+      *)
+        echo "unsupported AUTH_SERVICE_RUNTIME: ${auth_service_runtime}" >&2
+        exit 1
+        ;;
+    esac
   fi
 
-  case "${auth_service_runtime}" in
-    development)
-      echo "${auth_service_dev_url}"
-      ;;
-    production)
-      echo "${auth_service_prod_url}"
-      ;;
-    *)
-      echo "unsupported AUTH_SERVICE_RUNTIME: ${auth_service_runtime}" >&2
-      exit 1
-      ;;
-  esac
+  configured_url="${configured_url%/}"
+  if [[ "${configured_url}" != */auth ]]; then
+    configured_url="${configured_url}/auth"
+  fi
+
+  echo "${configured_url}"
 }
 
 ensure_service() {

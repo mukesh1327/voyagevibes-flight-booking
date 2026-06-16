@@ -1,0 +1,27 @@
+services:
+  kafka:
+    image: docker.io/apache/kafka:3.8.0  # Or latest; supports KRaft natively
+    container_name: kafka-kraft
+    env_file:
+      - ./.env
+    ports:
+      - "9192:9192"
+      - "9193:9093"  # Controller port
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+      - kafka_tmp:/tmp
+    networks:
+      - flight-booking-network
+
+# ================= Network ========================
+
+networks:
+  flight-booking-network:
+    name: flight-booking-network
+    driver: bridge
+
+# ================= Volumes ========================
+
+volumes:
+  kafka_data:
+  kafka_tmp:

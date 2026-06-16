@@ -7,6 +7,7 @@ import in.cloudxplorer.authservice.dto.AuthenticatedUserResponse;
 import in.cloudxplorer.authservice.dto.LogoutRequest;
 import in.cloudxplorer.authservice.service.AuthenticationService;
 import in.cloudxplorer.authservice.web.ApiErrorResponse;
+import in.cloudxplorer.authservice.web.SyntheticErrorRateResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
@@ -21,16 +22,21 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.security.SecureRandom;
+
 @RestController
 @RequestMapping("/auth")
 @Tag(name = "Authentication", description = "Customer and corporate authentication endpoints backed by Keycloak.")
 public class AuthController {
+
+    private static final SecureRandom RANDOM = new SecureRandom();
 
     private final AuthenticationService authenticationService;
 
@@ -112,6 +118,39 @@ public class AuthController {
     )
     public AuthFrontendConfigResponse frontendConfig() {
         return authenticationService.frontendConfig();
+    }
+
+    @GetMapping("/test/error-rate")
+    @Operation(
+            summary = "Generate a synthetic success or failure response",
+            description = "Useful for exercising dashboards, tracing, and error-rate alerting without impacting real login flows."
+    )
+    public SyntheticErrorRateResponse testErrorRate(
+            @RequestParam(name = "failureRatePercent", defaultValue = "20")
+            @jakarta.validation.constraints.Min(0)
+            @jakarta.validation.constraints.Max(100)
+            int failureRatePercent,
+            @RequestParam(name = "sample", required = false)
+            @jakarta.validation.constraints.Min(0)
+            @jakarta.validation.constraints.Max(99)
+            Integer sample
+    ) {
+        int resolvedSample = sample != null ? sample : RANDOM.nextInt(100);
+        boolean failed = resolvedSample < failureRatePercent;
+        if (failed) {
+            throw new in.cloudxplorer.authservice.exception.AuthServiceException(
+                    HttpStatus.SERVICE_UNAVAILABLE,
+                    "Synthetic failure for error-rate testing"
+            );
+        }
+
+        return new SyntheticErrorRateResponse(
+                java.time.Instant.now(),
+                false,
+                failureRatePercent,
+                resolvedSample,
+                "Synthetic request succeeded"
+        );
     }
 
     @GetMapping("/me")

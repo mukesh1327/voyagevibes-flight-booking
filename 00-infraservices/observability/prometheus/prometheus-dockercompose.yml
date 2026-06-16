@@ -1,0 +1,27 @@
+services:
+
+# Observability stack
+
+  prometheus:
+    image: docker.io/prom/prometheus:latest
+    container_name: prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --web.enable-remote-write-receiver
+      - --enable-feature=exemplar-storage
+      - --enable-feature=native-histograms
+    volumes:
+      - ./config/prometheus.yml:/etc/prometheus/prometheus.yml:ro,Z
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+    networks:
+      - flight-booking-network
+
+networks:
+  flight-booking-network:
+    name: flight-booking-network
+    driver: bridge
+
+volumes:
+  prometheus_data:

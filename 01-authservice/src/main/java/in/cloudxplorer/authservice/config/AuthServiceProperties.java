@@ -37,6 +37,7 @@ public class AuthServiceProperties {
 
         @NotBlank
         private String baseUrl;
+        private String publicBaseUrl;
 
         @NotBlank
         private String realm;
@@ -64,6 +65,14 @@ public class AuthServiceProperties {
 
         public void setBaseUrl(String baseUrl) {
             this.baseUrl = trimTrailingSlash(baseUrl);
+        }
+
+        public String getPublicBaseUrl() {
+            return StringUtils.hasText(publicBaseUrl) ? publicBaseUrl : baseUrl;
+        }
+
+        public void setPublicBaseUrl(String publicBaseUrl) {
+            this.publicBaseUrl = trimTrailingSlash(publicBaseUrl);
         }
 
         public String getRealm() {
@@ -190,6 +199,10 @@ public class AuthServiceProperties {
             return baseUrl + "/realms/" + realm;
         }
 
+        public String publicIssuerUri() {
+            return getPublicBaseUrl() + "/realms/" + realm;
+        }
+
         public String jwkSetUri() {
             return issuerUri() + "/protocol/openid-connect/certs";
         }
@@ -202,8 +215,20 @@ public class AuthServiceProperties {
             return issuerUri() + "/protocol/openid-connect/auth";
         }
 
+        public String publicAuthorizationEndpoint() {
+            return publicIssuerUri() + "/protocol/openid-connect/auth";
+        }
+
         public String logoutEndpoint() {
             return issuerUri() + "/protocol/openid-connect/logout";
+        }
+
+        public String publicLogoutEndpoint() {
+            return publicIssuerUri() + "/protocol/openid-connect/logout";
+        }
+
+        public String publicTokenEndpoint() {
+            return publicIssuerUri() + "/protocol/openid-connect/token";
         }
 
         public String userInfoEndpoint() {
@@ -237,12 +262,11 @@ public class AuthServiceProperties {
     public static class Security {
 
         @NotBlank
-        private String customerRole;
+        private String customerRole = "customer";
 
         @NotBlank
-        private String corporateRole;
+        private String corporateRole = "corporate";
 
-        @NotBlank
         private String adminRole = "admin";
 
         private final List<String> ignoredRoles = new ArrayList<>(List.of("offline_access", "uma_authorization"));

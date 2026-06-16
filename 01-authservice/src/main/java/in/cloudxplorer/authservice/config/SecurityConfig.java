@@ -1,10 +1,14 @@
 package in.cloudxplorer.authservice.config;
 
+import java.net.http.HttpClient;
+import javax.net.ssl.SSLContext;
+
 import in.cloudxplorer.authservice.security.KeycloakJwtAuthenticationConverter;
 import in.cloudxplorer.authservice.security.UserAccessResolver;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -15,11 +19,13 @@ import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtValidators;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.web.client.RestTemplate;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.List;
+import java.util.Objects;
 
 @Configuration
 @EnableMethodSecurity
@@ -53,6 +59,7 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.GET, "/health", "/docs", "/docs/**", "/swagger-ui/**", "/v3/api-docs/**", "/actuator/health/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/auth/test/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/auth/frontend-config").permitAll()
                         .requestMatchers(HttpMethod.POST, "/auth/customer/register", "/auth/customer/login", "/auth/corporate/login").permitAll()
                         .requestMatchers(HttpMethod.POST, "/auth/customer/logout").hasAnyAuthority(customerRole, adminRole)
@@ -69,12 +76,28 @@ public class SecurityConfig {
     @Bean
     public JwtDecoder jwtDecoder(AuthServiceProperties properties) {
         AuthServiceProperties.Keycloak keycloak = properties.getKeycloak();
-        NimbusJwtDecoder decoder = NimbusJwtDecoder.withJwkSetUri(keycloak.jwkSetUri()).build();
+        NimbusJwtDecoder decoder = NimbusJwtDecoder.withJwkSetUri(keycloak.jwkSetUri())
+                .restOperations(keycloakJwtRestTemplate(keycloak))
+                .build();
         OAuth2TokenValidator<Jwt> validator = new DelegatingOAuth2TokenValidator<>(
                 JwtValidators.createDefault(),
-                JwtValidators.createDefaultWithIssuer(keycloak.issuerUri())
+                JwtValidators.createDefaultWithIssuer(keycloak.publicIssuerUri())
         );
         decoder.setJwtValidator(validator);
         return decoder;
+    }
+
+    private RestTemplate keycloakJwtRestTemplate(AuthServiceProperties.Keycloak keycloak) {
+        HttpClient.Builder httpClientBuilder = HttpClient.newBuilder()
+                .connectTimeout(keycloak.getConnectTimeout())
+                .followRedirects(HttpClient.Redirect.NORMAL);
+        SSLContext sslContext = KeycloakSslContextFactory.create(keycloak);
+        if (sslContext != null) {
+            httpClientBuilder.sslContext(sslContext);
+        }
+        HttpClient httpClient = Objects.requireNonNull(httpClientBuilder.build(), "HttpClient must not be null");
+        JdkClientHttpRequestFactory requestFactory = new JdkClientHttpRequestFactory(httpClient);
+        requestFactory.setReadTimeout(Objects.requireNonNull(keycloak.getReadTimeout(), "Keycloak read timeout must not be null"));
+        return new RestTemplate(requestFactory);
     }
 }

@@ -1,0 +1,18 @@
+services:
+
+# Loki service
+  loki:
+    image: docker.io/grafana/loki:latest
+    container_name: loki
+    ports:
+      - "3100:3100"
+    networks:
+      - flight-booking-network
+    volumes:
+      - ./config/loki-config.yml:/etc/loki/loki-config.yaml:ro,Z
+    command: -config.file=/etc/loki/loki-config.yaml
+
+networks:
+  flight-booking-network:
+    name: flight-booking-network
+    driver: bridge

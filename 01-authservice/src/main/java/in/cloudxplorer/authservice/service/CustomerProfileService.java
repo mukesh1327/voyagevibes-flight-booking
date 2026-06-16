@@ -7,6 +7,7 @@ import in.cloudxplorer.authservice.repository.CustomerProfileRepository;
 import java.time.Instant;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 @Service
 public class CustomerProfileService {
@@ -20,24 +21,25 @@ public class CustomerProfileService {
     @Transactional
     public UpsertResult upsert(KeycloakUserProfile profile) {
         Instant now = Instant.now();
-        String userId = profile.subject().strip();
-        if (userId == null || userId.isEmpty()) {
+        String userId = normalize(profile.subject());
+        if (!StringUtils.hasText(userId)) {
             throw new IllegalArgumentException("User ID cannot be null or empty");
         }
+        String email = resolveEmail(profile, userId);
         CustomerProfile customerProfile = repository.findById(userId)
                 .orElseGet(CustomerProfile::new);
 
         boolean created = customerProfile.getKeycloakUserId() == null;
         if (created) {
-            customerProfile.setKeycloakUserId(profile.subject());
+            customerProfile.setKeycloakUserId(userId);
             customerProfile.setCreatedAt(now);
         }
 
-        customerProfile.setEmail(profile.email());
-        customerProfile.setFullName(profile.fullName());
-        customerProfile.setGivenName(profile.givenName());
-        customerProfile.setFamilyName(profile.familyName());
-        customerProfile.setIdentityProvider(profile.identityProvider());
+        customerProfile.setEmail(email);
+        customerProfile.setFullName(normalize(profile.fullName()));
+        customerProfile.setGivenName(normalize(profile.givenName()));
+        customerProfile.setFamilyName(normalize(profile.familyName()));
+        customerProfile.setIdentityProvider(normalize(profile.identityProvider()));
         customerProfile.setEmailVerified(profile.emailVerified());
         customerProfile.setUpdatedAt(now);
 
@@ -64,5 +66,24 @@ public class CustomerProfileService {
     }
 
     public record UpsertResult(CustomerProfileResponse profile, boolean created) {
+    }
+
+    private String resolveEmail(KeycloakUserProfile profile, String userId) {
+        String email = normalize(profile.email());
+        if (StringUtils.hasText(email)) {
+            return email;
+        }
+        String username = normalize(profile.username());
+        if (StringUtils.hasText(username)) {
+            return username;
+        }
+        return userId;
+    }
+
+    private String normalize(String value) {
+        if (!StringUtils.hasText(value)) {
+            return null;
+        }
+        return value.strip();
     }
 }

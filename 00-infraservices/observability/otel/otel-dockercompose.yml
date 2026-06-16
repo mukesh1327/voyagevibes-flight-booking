@@ -1,0 +1,26 @@
+services:
+
+# OpenTelemetry Collector service
+  opentelemetry-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    container_name: otel-collector
+    restart: unless-stopped
+    volumes:
+      - ./config/otel-collector-config.yml:/etc/otel-collector-config.yml:ro,Z
+      - nginx_logs:/var/log/nginx:ro
+    command: ["--config=/etc/otel-collector-config.yml"]
+    ports:
+      - "4317:4317" # OTLP gRPC
+      - "4318:4318" # OTLP HTTP
+      - "8888:8888" # Collector metrics
+      - "8889:8889" # Prometheus exporter
+    networks:
+      - flight-booking-network
+
+networks:
+  flight-booking-network:
+    name: flight-booking-network
+    driver: bridge
+
+volumes:
+  nginx_logs:

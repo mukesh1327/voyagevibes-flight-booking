@@ -30,6 +30,3 @@ registry.redhat.io/rhel9/postgresql-16:latest
 
 - Auth service  
 registry.redhat.io/ubi9/openjdk-17@sha256:615a2e789a3b2d982ec9e126d525697032440b1eace5dfea4fe6618cc85a7935
-
-
-podman compose -f docker-compose.yml up -d

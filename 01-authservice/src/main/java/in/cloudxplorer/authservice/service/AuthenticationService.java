@@ -20,6 +20,8 @@ import in.cloudxplorer.authservice.util.JwtClaimUtils;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -29,6 +31,8 @@ import org.springframework.util.StringUtils;
 
 @Service
 public class AuthenticationService {
+
+    private static final Logger logger = LoggerFactory.getLogger(AuthenticationService.class);
 
     private final KeycloakClient keycloakClient;
     private final KeycloakRoleExtractor roleExtractor;
@@ -77,11 +81,11 @@ public class AuthenticationService {
         AuthServiceProperties.Keycloak keycloak = properties.getKeycloak();
         return new AuthFrontendConfigResponse(
                 keycloak.getRealm(),
-                keycloak.issuerUri(),
+                keycloak.publicIssuerUri(),
                 keycloak.getClientId(),
-                keycloak.authorizationEndpoint(),
-                keycloak.tokenEndpoint(),
-                keycloak.logoutEndpoint(),
+                keycloak.publicAuthorizationEndpoint(),
+                keycloak.publicTokenEndpoint(),
+                keycloak.publicLogoutEndpoint(),
                 keycloak.getDefaultRedirectUri(),
                 keycloak.getAuthorizationScope(),
                 keycloak.getAuthorizationResponseType(),
@@ -94,7 +98,7 @@ public class AuthenticationService {
                         properties.getSecurity().getCustomerRole(),
                         keycloak.getGoogleProviderAlias(),
                         true,
-                        authorizationParameters(keycloak.getGoogleProviderAlias())
+                        authorizationParameters(keycloak.getGoogleProviderAlias(), true)
                 ),
                 new AuthFrontendConfigResponse.LoginFlowConfig(
                         "corporate",
@@ -103,7 +107,7 @@ public class AuthenticationService {
                         properties.getSecurity().getCorporateRole(),
                         null,
                         false,
-                        authorizationParameters(null)
+                        authorizationParameters(null, true)
                 ),
                 properties.getSecurity().getCorporateSubRoles().stream()
                         .map(role -> new AuthFrontendConfigResponse.CorporateRoleDescriptor(
@@ -144,11 +148,12 @@ public class AuthenticationService {
 
     private KeycloakSession authenticate(AuthCodeExchangeRequest request, UserType userType, boolean enforceGoogleBroker) {
         TokenEndpointResponse tokenResponse = keycloakClient.exchangeAuthorizationCode(request);
-        Map<String, Object> claims = JwtClaimUtils.decodeClaims(tokenResponse.accessToken());
-        Set<String> roles = roleExtractor.extractRoles(claims, properties.getKeycloak().getClientId());
+        Map<String, Object> accessTokenClaims = JwtClaimUtils.decodeClaims(tokenResponse.accessToken());
+        Map<String, Object> idTokenClaims = JwtClaimUtils.decodeClaims(tokenResponse.idToken());
+        Set<String> roles = roleExtractor.extractRoles(accessTokenClaims, properties.getKeycloak().getClientId());
         UserAccessProfile accessProfile = userAccessResolver.resolve(roles);
-        Map<String, Object> userInfo = keycloakClient.fetchUserInfo(tokenResponse.accessToken());
-        KeycloakUserProfile profile = toUserProfile(claims, userInfo);
+        Map<String, Object> userInfo = fetchUserInfoOrFallback(tokenResponse.accessToken());
+        KeycloakUserProfile profile = toUserProfile(accessTokenClaims, idTokenClaims, userInfo);
 
         if (userType == UserType.CUSTOMER) {
             ensureUserType(accessProfile, UserType.CUSTOMER, "Customer role is required");
@@ -186,24 +191,58 @@ public class AuthenticationService {
         }
     }
 
-    private KeycloakUserProfile toUserProfile(Map<String, Object> claims, Map<String, Object> userInfo) {
-        String identityProvider = stringValue(claims.get("identity_provider"));
-        if (!StringUtils.hasText(identityProvider)) {
-            identityProvider = stringValue(claims.get("idp_alias"));
+    private KeycloakUserProfile toUserProfile(
+            Map<String, Object> accessTokenClaims,
+            Map<String, Object> idTokenClaims,
+            Map<String, Object> userInfo
+    ) {
+        String identityProvider = resolveIdentityProvider(userInfo, accessTokenClaims, idTokenClaims);
+        String subject = firstNonBlankValue(
+                userInfo.get("sub"),
+                accessTokenClaims.get("sub"),
+                idTokenClaims.get("sub")
+        );
+        if (!StringUtils.hasText(subject)) {
+            logger.warn("Resolved Keycloak user profile without a subject; userinfo and token claims did not contain a usable sub");
         }
-        if (!StringUtils.hasText(identityProvider)) {
-            identityProvider = "keycloak";
-        }
+
         return new KeycloakUserProfile(
-                stringValue(userInfo.getOrDefault("sub", claims.get("sub"))),
-                stringValue(userInfo.getOrDefault("preferred_username", claims.get("preferred_username"))),
-                stringValue(userInfo.getOrDefault("email", claims.get("email"))),
-                stringValue(userInfo.getOrDefault("name", claims.get("name"))),
-                stringValue(userInfo.getOrDefault("given_name", claims.get("given_name"))),
-                stringValue(userInfo.getOrDefault("family_name", claims.get("family_name"))),
-                booleanValue(userInfo.getOrDefault("email_verified", claims.get("email_verified"))),
+                subject,
+                firstNonBlankValue(
+                        userInfo.get("preferred_username"),
+                        accessTokenClaims.get("preferred_username"),
+                        idTokenClaims.get("preferred_username")
+                ),
+                firstNonBlankValue(
+                        userInfo.get("email"),
+                        accessTokenClaims.get("email"),
+                        idTokenClaims.get("email")
+                ),
+                firstNonBlankValue(
+                        userInfo.get("name"),
+                        accessTokenClaims.get("name"),
+                        idTokenClaims.get("name")
+                ),
+                firstNonBlankValue(
+                        userInfo.get("given_name"),
+                        accessTokenClaims.get("given_name"),
+                        idTokenClaims.get("given_name")
+                ),
+                firstNonBlankValue(
+                        userInfo.get("family_name"),
+                        accessTokenClaims.get("family_name"),
+                        idTokenClaims.get("family_name")
+                ),
+                booleanValue(firstNonNull(
+                        userInfo.get("email_verified"),
+                        accessTokenClaims.get("email_verified"),
+                        idTokenClaims.get("email_verified")
+                )),
                 identityProvider,
-                stringValue(claims.get("iss"))
+                firstNonBlankValue(
+                        accessTokenClaims.get("iss"),
+                        idTokenClaims.get("iss")
+                )
         );
     }
 
@@ -259,11 +298,18 @@ public class AuthenticationService {
     }
 
     private Map<String, String> authorizationParameters(String identityProviderHint) {
+        return authorizationParameters(identityProviderHint, false);
+    }
+
+    private Map<String, String> authorizationParameters(String identityProviderHint, boolean forceFreshLogin) {
         Map<String, String> parameters = new LinkedHashMap<>();
         parameters.put("client_id", properties.getKeycloak().getClientId());
         parameters.put("response_type", properties.getKeycloak().getAuthorizationResponseType());
         parameters.put("scope", properties.getKeycloak().getAuthorizationScope());
         parameters.put("code_challenge_method", properties.getKeycloak().getPkceCodeChallengeMethod());
+        if (forceFreshLogin) {
+            parameters.put("prompt", "login");
+        }
         if (StringUtils.hasText(identityProviderHint)) {
             parameters.put("kc_idp_hint", identityProviderHint);
         }
@@ -296,5 +342,48 @@ public class AuthenticationService {
             return second;
         }
         return fallback;
+    }
+
+    private String resolveIdentityProvider(
+            Map<String, Object> userInfo,
+            Map<String, Object> accessTokenClaims,
+            Map<String, Object> idTokenClaims
+    ) {
+        return firstNonBlankValue(
+                userInfo.get("identity_provider"),
+                userInfo.get("idp_alias"),
+                accessTokenClaims.get("identity_provider"),
+                accessTokenClaims.get("idp_alias"),
+                idTokenClaims.get("identity_provider"),
+                idTokenClaims.get("idp_alias")
+        );
+    }
+
+    private Object firstNonNull(Object... values) {
+        for (Object value : values) {
+            if (value != null) {
+                return value;
+            }
+        }
+        return null;
+    }
+
+    private String firstNonBlankValue(Object... values) {
+        for (Object value : values) {
+            String stringValue = stringValue(value);
+            if (StringUtils.hasText(stringValue)) {
+                return stringValue.strip();
+            }
+        }
+        return null;
+    }
+
+    private Map<String, Object> fetchUserInfoOrFallback(String accessToken) {
+        try {
+            return keycloakClient.fetchUserInfo(accessToken);
+        } catch (Exception ex) {
+            logger.warn("Keycloak userinfo lookup failed; continuing with token claims only: {}", ex.getMessage());
+            return Map.of();
+        }
     }
 }

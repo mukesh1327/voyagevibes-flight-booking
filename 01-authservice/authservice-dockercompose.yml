@@ -2,22 +2,22 @@ services:
 
 # ================= Auth Service ========================
 
-  auth_postgres_init:
+  auth-postgres-init:
     image: registry.redhat.io/rhel9/postgresql-16:latest
-    container_name: auth_postgres_init
+    container_name: auth-postgres-init
     restart: "no"
     env_file:
       - ../00-infraservices/databases/postgres/.env
     command: >
       sh -ec "
-        until pg_isready -h platform_postgres -U $$POSTGRESQL_USER -d $$POSTGRESQL_DATABASE; do sleep 2; done;
-        psql -h platform_postgres -U $$POSTGRESQL_USER -d $$POSTGRESQL_DATABASE -v ON_ERROR_STOP=1 -f /init/auth-init.sql
+        until pg_isready -h platform-postgres -U $$POSTGRESQL_USER -d $$POSTGRESQL_DATABASE; do sleep 2; done;
+        psql -h platform-postgres -U $$POSTGRESQL_USER -d $$POSTGRESQL_DATABASE -v ON_ERROR_STOP=1 -f /init/auth-init.sql
       "
     depends_on:
-      platform_postgres:
+      platform-postgres:
         condition: service_healthy
     volumes:
-      - ./init-db:/init:ro
+      - ./init-db:/init:ro,Z
     networks:
       - flight-booking-network
 
@@ -31,19 +31,27 @@ services:
     env_file:
       - ./.env
     environment:
-      KEYCLOAK_URL: ${AUTH_SERVICE_KEYCLOAK_URL:-http://keycloak:8080}
-      DB_URL: ${AUTH_SERVICE_DB_URL:-jdbc:postgresql://platform_postgres:5432/authdb?sslmode=disable}
+      KEYCLOAK_URL: ${AUTH_SERVICE_KEYCLOAK_URL:-https://keycloak.voyagevibes.in:8091}
+      KEYCLOAK_PUBLIC_URL: ${AUTH_SERVICE_KEYCLOAK_PUBLIC_URL:-https://keycloak.voyagevibes.in:8091}
+      KEYCLOAK_TRUST_STORE_PATH: ${AUTH_SERVICE_KEYCLOAK_TRUST_STORE_PATH:-/opt/keycloak-certs/keycloak.voyagevibes.in.truststore.p12}
+      KEYCLOAK_TRUST_STORE_PASSWORD: ${AUTH_SERVICE_KEYCLOAK_TRUST_STORE_PASSWORD:-changeit}
+      KEYCLOAK_TRUST_STORE_TYPE: ${AUTH_SERVICE_KEYCLOAK_TRUST_STORE_TYPE:-PKCS12}
+      DB_URL: ${AUTH_SERVICE_DB_URL:-jdbc:postgresql://platform-postgres:5432/authdb?sslmode=disable}
     depends_on:
       keycloak:
         condition: service_healthy
-      platform_postgres:
+      platform-postgres:
         condition: service_healthy
-      auth_postgres_init:
+      auth-postgres-init:
         condition: service_completed_successfully
   
     ports:
       - "${AUTH_SERVICE_HOST_PORT:-8081}:8081"
       - "7071:7071"
+    volumes:
+      - ../00-infraservices/keycloak/ssl-certs:/opt/keycloak-certs:ro,Z
+    extra_hosts:
+      - "keycloak.voyagevibes.in:keycloak"
 
     networks:
       - flight-booking-network

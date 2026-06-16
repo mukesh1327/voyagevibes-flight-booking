@@ -87,7 +87,7 @@ app:
     client-id: ${KEYCLOAK_CLIENT_ID:flight-auth-service}
     client-secret: ${KEYCLOAK_CLIENT_SECRET:PublicApiSecret123$}
     admin-client-id: ${KEYCLOAK_ADMIN_CLIENT_ID:flight-auth-service}
-    admin-client-secret: ${KEYCLOAK_ADMIN_CLIENT_SECRET:CorpWebSecret123$}
+    admin-client-secret: ${KEYCLOAK_ADMIN_CLIENT_SECRET:}
     default-redirect-uri: ${KEYCLOAK_DEFAULT_REDIRECT_URI:http://localhost:8081/swagger-ui/oauth2-redirect.html}
     google-provider-alias: ${KEYCLOAK_GOOGLE_PROVIDER_ALIAS:google}
     authorization-scope: ${KEYCLOAK_AUTHORIZATION_SCOPE:openid profile email}

@@ -32,7 +32,7 @@ public class OpenApiConfig {
     public GroupedOpenApi customerOpenApi() {
         return GroupedOpenApi.builder()
                 .group("customer")
-                .pathsToMatch("/auth/customer/**", "/auth/me", "/auth/frontend-config")
+                .pathsToMatch("/auth/customer/**", "/auth/me", "/auth/frontend-config", "/auth/test/**")
                 .addOpenApiCustomizer(openApi -> openApi.info(new io.swagger.v3.oas.models.info.Info()
                         .title("Flight Booking Customer Authentication API")
                         .version("v1")
@@ -44,7 +44,7 @@ public class OpenApiConfig {
     public GroupedOpenApi corporateOpenApi() {
         return GroupedOpenApi.builder()
                 .group("corporate")
-                .pathsToMatch("/auth/corporate/**", "/auth/me", "/auth/frontend-config")
+                .pathsToMatch("/auth/corporate/**", "/auth/me", "/auth/frontend-config", "/auth/test/**")
                 .addOpenApiCustomizer(openApi -> openApi.info(new io.swagger.v3.oas.models.info.Info()
                         .title("Flight Booking Corporate Authentication API")
                         .version("v1")

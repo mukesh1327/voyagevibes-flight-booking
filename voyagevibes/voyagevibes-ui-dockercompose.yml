@@ -1,0 +1,26 @@
+services:
+  voyagevibes-ui:
+    # image: quay.io/mukeshs1306/voyagevibes-ui:latest
+    build:
+      context: .
+      dockerfile: ./docker/Containerfile
+    container_name: voyagevibes-ui
+    restart: always
+    env_file:
+      - ./.env
+    ports:
+      - "9001:9001"
+      - "9000:9000"
+    volumes:
+      - ./https-certs:/etc/nginx/certs:ro,Z
+      - nginx_logs:/opt/app-root/src/logs/nginx
+    networks:
+      - flight-booking-network
+
+networks:
+  flight-booking-network:
+    name: flight-booking-network
+    driver: bridge
+
+volumes:
+  nginx_logs:

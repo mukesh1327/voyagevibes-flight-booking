@@ -1,47 +1,55 @@
 services:
 
-  kong_postgres_init:
+  kong-postgres-init:
     image: registry.redhat.io/rhel9/postgresql-16:latest
-    container_name: kong_postgres_init
+    container_name: kong-postgres-init
     restart: "no"
     env_file:
       - ./.env
     command: >
       sh -ec "
-        until pg_isready -h platform_postgres -U $$POSTGRESQL_USER -d $$POSTGRESQL_DATABASE; do sleep 2; done;
-        psql -h platform_postgres -U $$POSTGRESQL_USER -d $$POSTGRESQL_DATABASE -v ON_ERROR_STOP=1 -f /init/db-init.sql
+        until pg_isready -h platform-postgres -U $$POSTGRESQL_USER -d $$POSTGRESQL_DATABASE; do sleep 2; done;
+        psql -h platform-postgres -U $$POSTGRESQL_USER -d $$POSTGRESQL_DATABASE -v ON_ERROR_STOP=1 -f /init/db-init.sql
       "
     depends_on:
-      platform_postgres:
+      platform-postgres:
         condition: service_healthy
     volumes:
-      - ./init-db:/init:ro
+      - ./init-db:/init:ro,Z
     networks:
       - flight-booking-network
 
   kong-migrations:
+    container_name: kong-migrations
     image: docker.io/library/kong
-    command: >
-      /bin/sh -c
-      "kong migrations bootstrap --vv ||
-      (kong migrations up --vv && kong migrations finish --vv)"
+    command:
+      - /bin/sh
+      - -ec
+      - |
+        # Bootstrap is idempotent but does not apply newly added migrations to
+        # an existing database. Finish interrupted migrations before applying
+        # newly available migrations, then finalize the new schema.
+        kong migrations bootstrap --vv || true
+        kong migrations finish --vv || true
+        kong migrations up --vv
+        kong migrations finish --vv
     env_file:
       - ./.env
     volumes:
-      - ./ssl-certs:/etc/kong/certs:ro
+      - ./ssl-certs:/etc/kong/certs:ro,Z
     depends_on:
-      platform_postgres:
+      platform-postgres:
         condition: service_healthy
-      kong_postgres_init:
+      kong-postgres-init:
         condition: service_completed_successfully
     networks:
       - flight-booking-network
 
 # -----------
 
-  kong_gateway:
+  kong-gateway:
     image: docker.io/library/kong
-    container_name: kong_voyagevibes_gateway
+    container_name: kong-gateway
     env_file:
       - ./.env
     ports:
@@ -49,11 +57,11 @@ services:
       - "8443:8443"  # HTTPS
       - "8001:8001"  # Admin API
     volumes:
-      - ./ssl-certs:/etc/kong/certs:ro
+      - ./ssl-certs:/etc/kong/certs:ro,Z
     depends_on:
-      platform_postgres:
+      platform-postgres:
         condition: service_healthy
-      kong_postgres_init:
+      kong-postgres-init:
         condition: service_completed_successfully
       kong-migrations:
         condition: service_completed_successfully
@@ -61,20 +69,21 @@ services:
       - flight-booking-network
 
   kong-routes-init:
+    container_name: kong-routes-init
     image: registry.redhat.io/openshift4/network-tools-rhel9:v4.19
     restart: "no"
     command: ["/bin/bash", "/opt/bootstrap/register-kong-routes.sh"]
     environment:
-      KONG_ADMIN_BASE_URL: http://kong_gateway:8001
+      KONG_ADMIN_BASE_URL: http://kong-gateway:8001
       AUTH_SERVICE_RUNTIME: ${AUTH_SERVICE_RUNTIME:-production}
       AUTH_SERVICE_URL: ${AUTH_SERVICE_URL:-}
-      AUTH_SERVICE_DEV_URL: ${AUTH_SERVICE_DEV_URL:-http://host.containers.internal:8081}
+      AUTH_SERVICE_DEV_URL: ${AUTH_SERVICE_DEV_URL:-http://host.containers.internal:8081/auth}
       AUTH_SERVICE_PROD_URL: ${AUTH_SERVICE_PROD_URL:-http://auth-service:8081/auth}
     depends_on:
-      kong_gateway:
+      kong-gateway:
         condition: service_started
     volumes:
-      - ./api-init/register-kong-routes.sh:/opt/bootstrap/register-kong-routes.sh:ro
+      - ./api-init/register-kong-routes.sh:/opt/bootstrap/register-kong-routes.sh:ro,Z
     networks:
       - flight-booking-network
 

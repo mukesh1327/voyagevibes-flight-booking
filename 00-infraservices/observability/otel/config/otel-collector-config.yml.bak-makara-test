@@ -1,0 +1,94 @@
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+        cors:
+          allowed_origins:
+            - http://localhost:9000
+            - https://localhost:9001
+            - http://www.voyagevibes.in:9000
+            - https://www.voyagevibes.in:9001
+            - http://voyagevibes.in:9000
+            - https://voyagevibes.in:9001
+            - http://customer-ui.voyagevibes.in:9000
+            - https://customer-ui.voyagevibes.in:9001
+          allowed_headers:
+            - '*'
+
+  filelog/nginx_access:
+    include:
+      - /var/log/nginx/*.access.log
+    start_at: beginning
+    operators:
+      - type: json_parser
+        parse_from: body
+  filelog/nginx_error:
+    include:
+      - /var/log/nginx/*.error.log
+    start_at: beginning
+
+processors:
+  batch:
+  resource/nginx:
+    attributes:
+      - action: insert
+        key: service.name
+        value: nginx
+      - action: upsert
+        key: service.name
+        from_attribute: service
+      - action: delete
+        key: service
+
+exporters:
+
+  otlp/tempo:
+    endpoint: tempo:4317
+    tls:
+      insecure: true
+
+  otlphttp/loki:
+    endpoint: http://loki:3100/otlp
+
+  prometheus:
+    endpoint: "0.0.0.0:8889"
+    resource_to_telemetry_conversion:
+      enabled: true
+
+otlphttp/makara:
+  endpoint: http://host.containers.internal:4324
+  headers:
+    X-API-Key: local-dev-key
+
+  debug:
+    verbosity: basic
+
+service:
+  telemetry:
+    metrics:
+      readers:
+        - pull:
+            exporter:
+              prometheus:
+                host: 0.0.0.0
+                port: 8888
+  pipelines:
+    metrics:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [prometheus, debug]
+    traces:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [otlp/tempo, debug]
+    logs/otlp:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [otlphttp/loki, debug]
+    logs/nginx:
+      receivers: [filelog/nginx_access, filelog/nginx_error]
+      processors: [resource/nginx, batch]
+      exporters: [otlphttp/loki, debug]

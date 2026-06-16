@@ -1,0 +1,32 @@
+auth_enabled: false
+
+server:
+  http_listen_port: 3200
+  log_level: info
+
+distributor:
+  receivers:
+    otlp:
+      protocols:
+        grpc:
+          endpoint: 0.0.0.0:4317
+        http:
+          endpoint: 0.0.0.0:4318
+
+storage:
+  trace:
+    backend: local
+
+    local:
+      path: /tmp/tempo/blocks
+
+    wal:
+      path: /tmp/tempo/wal
+
+query_frontend:
+  search:
+    duration_slo: 5s
+    throughput_bytes_slo: 1073741824
+
+usage_report:
+  reporting_enabled: false

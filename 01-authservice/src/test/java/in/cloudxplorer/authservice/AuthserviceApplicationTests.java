@@ -125,6 +125,29 @@ class AuthserviceApplicationTests {
 	}
 
 	@Test
+	void syntheticErrorRateEndpointCanReturnSuccess() throws Exception {
+		mockMvc.perform(get("/auth/test/error-rate")
+						.param("failureRatePercent", "0")
+						.param("sample", "99"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.failed").value(false))
+				.andExpect(jsonPath("$.failureRatePercent").value(0))
+				.andExpect(jsonPath("$.sample").value(99))
+				.andExpect(jsonPath("$.message").value("Synthetic request succeeded"));
+	}
+
+	@Test
+	void syntheticErrorRateEndpointCanReturnSyntheticFailure() throws Exception {
+		mockMvc.perform(get("/auth/test/error-rate")
+						.param("failureRatePercent", "100")
+						.param("sample", "0"))
+				.andExpect(status().isServiceUnavailable())
+				.andExpect(jsonPath("$.status").value(503))
+				.andExpect(jsonPath("$.message").value("Synthetic failure for error-rate testing"))
+				.andExpect(jsonPath("$.path").value("/auth/test/error-rate"));
+	}
+
+	@Test
 	void meEndpointRequiresAuthentication() throws Exception {
 		mockMvc.perform(get("/auth/me"))
 				.andExpect(status().isUnauthorized());

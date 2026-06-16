@@ -286,7 +286,7 @@ If you enable HTTPS against a private or self-signed Keycloak certificate, confi
 
 - Use the PostgreSQL JDBC driver `org.postgresql:postgresql:42.7.11`.
 - Preferred JDBC URL pattern:
-  `jdbc:postgresql://platform_postgres:5432/authdb?sslmode=verify-full&sslrootcert=/certs/postgres-ca.crt`
+  `jdbc:postgresql://platform-postgres:5432/authdb?sslmode=verify-full&sslrootcert=/certs/postgres-ca.crt`
 - `sslmode=verify-full` validates both trust and hostname, so it is the strongest common configuration for this service.
 - Mount the PostgreSQL CA certificate into the container or host and point `sslrootcert` to that file.
 - For host-based local development, `jdbc:postgresql://localhost:5432/authdb?sslmode=disable` is the simplest starting point.
