@@ -4,12 +4,18 @@ This template provides a minimal setup to get React working in Vite with HMR and
 
 ## OpenTelemetry
 
-Browser tracing is disabled by default. Copy `.env.example` to `.env.local` and set:
+Browser telemetry is disabled by default. Copy `.env.example` to `.env.local` and set:
 
 ```env
 VITE_OTEL_ENABLED=true
 VITE_OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318/v1/traces
 ```
+
+When enabled, the UI exports:
+
+- traces for route and fetch instrumentation
+- logs for console output and unhandled browser errors
+- metrics for bootstrap timing and browser error counts
 
 Keep `VITE_OTEL_PROPAGATE_TRACE_HEADERS=false` unless the target API explicitly allows `traceparent`/`tracestate` CORS headers.
 

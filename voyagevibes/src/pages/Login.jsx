@@ -10,30 +10,24 @@ const Login = () => {
 
   useEffect(() => {
     const fetchConfig = async () => {
-      let data = null;
-      let pendingType = null;
-
       try {
-        data = await getFrontendConfig();
+        const data = await getFrontendConfig();
         setConfig(data);
-      } catch (err) {
-        console.error('Error loading config:', err);
-        setError('Unable to reach the authentication service. Please try again later.');
-        setLoading(false);
-        return;
-      }
-
-      try {
-        pendingType = readPendingLoginType();
+        const pendingType = readPendingLoginType();
         if (!pendingType) {
           return;
         }
 
         setActiveTab(pendingType);
-        await startLoginFlow(pendingType, data, { skipSsoClear: true });
+        try {
+          await startLoginFlow(pendingType, data, { skipSsoClear: true });
+        } catch (err) {
+          console.error('Error continuing login flow:', err);
+          setError(err.message || 'Unable to continue the login flow. Please try again.');
+        }
       } catch (err) {
-        console.error('Error continuing login flow:', err);
-        setError(err.message || 'Unable to continue the login flow. Please try again.');
+        console.error('Error loading config:', err);
+        setError('Unable to reach the authentication service. Please try again later.');
       } finally {
         setLoading(false);
       }
