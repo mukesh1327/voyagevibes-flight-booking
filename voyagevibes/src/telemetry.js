@@ -1,4 +1,4 @@
-import { metrics, trace } from '@opentelemetry/api';
+import { context, isSpanContextValid, metrics, SpanStatusCode, trace } from '@opentelemetry/api';
 import { logs, SeverityNumber } from '@opentelemetry/api-logs';
 import { ZoneContextManager } from '@opentelemetry/context-zone';
 import { OTLPLogExporter } from '@opentelemetry/exporter-logs-otlp-http';
@@ -124,10 +124,12 @@ export const initializeTelemetry = () => {
     contextManager: new ZoneContextManager(),
   });
 
-  const loggerProvider = new LoggerProvider({ resource });
-  loggerProvider.addLogRecordProcessor(
-    new BatchLogRecordProcessor(new OTLPLogExporter({ url: collectorUrls.logs })),
-  );
+  const loggerProvider = new LoggerProvider({
+    resource,
+    processors: [
+      new BatchLogRecordProcessor(new OTLPLogExporter({ url: collectorUrls.logs })),
+    ],
+  });
   logs.setGlobalLoggerProvider(loggerProvider);
 
   const meterProvider = new MeterProvider({ resource });
@@ -210,4 +212,41 @@ export const initializeTelemetry = () => {
     loggerProvider.shutdown().catch(() => {});
     meterProvider.shutdown().catch(() => {});
   }, { once: true });
+};
+
+export const runDemoClickTrace = (callback) => {
+  const serviceName = import.meta.env.VITE_OTEL_SERVICE_NAME || 'voyagevibes-ui';
+  const serviceVersion = import.meta.env.VITE_OTEL_SERVICE_VERSION || '0.0.0';
+  const tracer = trace.getTracer(serviceName, serviceVersion);
+
+  return tracer.startActiveSpan('browser click: makara demo button', async (span) => {
+    try {
+      const result = await callback(span);
+      span.setStatus({ code: SpanStatusCode.OK });
+      return result;
+    } catch (error) {
+      span.recordException(error);
+      span.setStatus({
+        code: SpanStatusCode.ERROR,
+        message: error instanceof Error ? error.message : String(error),
+      });
+      throw error;
+    } finally {
+      span.end();
+    }
+  });
+};
+
+export const injectTraceHeaders = (headers) => {
+  const activeSpan = trace.getSpan(context.active());
+  const spanContext = activeSpan?.spanContext();
+
+  if (!spanContext || !isSpanContextValid(spanContext)) {
+    return;
+  }
+
+  headers.set(
+    'traceparent',
+    `00-${spanContext.traceId}-${spanContext.spanId}-${spanContext.traceFlags.toString(16).padStart(2, '0')}`,
+  );
 };

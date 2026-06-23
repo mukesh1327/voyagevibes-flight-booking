@@ -1,4 +1,4 @@
-﻿receivers:
+receivers:
   otlp:
     protocols:
       grpc:
@@ -44,17 +44,10 @@ processors:
         key: service
 
 exporters:
-
   otlp/tempo:
     endpoint: tempo:4317
     tls:
       insecure: true
-
-  otlphttp/makara_gateway:
-    endpoint: ${env:MAKARA_OTEL_GATEWAY_OTLP_HTTP_ENDPOINT}
-    headers:
-      Authorization: Bearer ${env:MAKARA_SERVICE_TOKEN}
-      X-Makara-Tenant-ID: ${env:MAKARA_TENANT_ID}
 
   otlphttp/loki:
     endpoint: http://loki:3100/otlp
@@ -80,16 +73,16 @@ service:
     metrics:
       receivers: [otlp]
       processors: [batch]
-      exporters: [prometheus, otlphttp/makara_gateway, debug]
+      exporters: [prometheus, debug]
     traces:
       receivers: [otlp]
       processors: [batch]
-      exporters: [otlphttp/makara_gateway, debug]
+      exporters: [otlp/tempo, debug]
     logs/otlp:
       receivers: [otlp]
       processors: [batch]
-      exporters: [otlphttp/makara_gateway, debug]
+      exporters: [otlphttp/loki, debug]
     logs/nginx:
       receivers: [filelog/nginx_access, filelog/nginx_error]
       processors: [resource/nginx, batch]
-      exporters: [otlphttp/makara_gateway, debug]
+      exporters: [otlphttp/loki, debug]
