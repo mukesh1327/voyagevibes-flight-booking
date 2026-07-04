@@ -6,11 +6,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.actuate.health.Health;
-import org.springframework.boot.test.autoconfigure.actuate.observability.AutoConfigureObservability;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.http.MediaType;
 import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
@@ -20,14 +18,12 @@ import java.util.Map;
 
 import static org.mockito.Mockito.doReturn;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
 @AutoConfigureMockMvc
-@AutoConfigureObservability
 class AuthserviceApplicationTests {
 
 	@Autowired
@@ -150,25 +146,6 @@ class AuthserviceApplicationTests {
 	}
 
 	@Test
-	void demoButtonClickEndpointIsPublicAndPersistsEvent() throws Exception {
-		mockMvc.perform(post("/demo/button-click")
-						.contentType(MediaType.APPLICATION_JSON)
-						.header("traceparent", "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01")
-						.content("""
-								{
-								  "sessionId": "demo-session-1",
-								  "buttonName": "Collect complete trace"
-								}
-								"""))
-				.andExpect(status().isCreated())
-				.andExpect(jsonPath("$.sessionId").value("demo-session-1"))
-				.andExpect(jsonPath("$.buttonName").value("Collect complete trace"))
-				.andExpect(jsonPath("$.traceId").value("4bf92f3577b34da6a3ce929d0e0e4736"))
-				.andExpect(jsonPath("$.totalEvents").value(1))
-				.andExpect(jsonPath("$.message").value("Browser click reached backend, touched the database, and returned to the UI."));
-	}
-
-	@Test
 	void meEndpointRequiresAuthentication() throws Exception {
 		mockMvc.perform(get("/auth/me"))
 				.andExpect(status().isUnauthorized());
@@ -211,11 +188,7 @@ class AuthserviceApplicationTests {
 	}
 
 	@Test
-	void observabilityAndLoggingDefaultsAreBoundFromAppProperties() {
-		org.assertj.core.api.Assertions.assertThat(properties.getObservability().getServiceName()).isEqualTo("authservice");
-		org.assertj.core.api.Assertions.assertThat(properties.getObservability().getTelemetry().getTrace().isEnabled()).isFalse();
-		org.assertj.core.api.Assertions.assertThat(properties.getObservability().getTelemetry().getMetrics().isEnabled()).isFalse();
-		org.assertj.core.api.Assertions.assertThat(properties.getObservability().getTelemetry().getLogs().isEnabled()).isFalse();
+	void loggingAndKeycloakDefaultsAreBoundFromAppProperties() {
 		org.assertj.core.api.Assertions.assertThat(properties.getLogging().getFilePath()).isEqualTo("logs/authservice.log");
 		org.assertj.core.api.Assertions.assertThat(properties.getKeycloak().getBaseUrl()).isEqualTo(keycloakBaseUrl);
 	}

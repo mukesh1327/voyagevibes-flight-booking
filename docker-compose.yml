@@ -15,13 +15,6 @@ include:
 # Gateway
   - ./00-infraservices/gateway/kong/kong-dockercompose.yml
 
-# Observability services
-  # - ./00-infraservices/observability/prometheus/prometheus-dockercompose.yml
-  # - ./00-infraservices/observability/loki/loki-dockercompose.yml
-  # - ./00-infraservices/observability/tempo/tempo-dockercompose.yml
-  # - ./00-infraservices/observability/grafana/grafana-dockercompose.yml
-  - ./00-infraservices/observability/otel/otel-dockercompose.yml
-
 # Authservice
   - ./01-authservice/authservice-dockercompose.yml
 

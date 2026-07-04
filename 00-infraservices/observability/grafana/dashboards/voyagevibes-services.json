@@ -138,24 +138,6 @@
           "unit": "mbytes"
         }
       }
-    },
-    {
-      "type": "timeseries",
-      "title": "Collector Metrics Ingest Rate",
-      "gridPos": { "h": 6, "w": 24, "x": 0, "y": 20 },
-      "targets": [
-        {
-          "refId": "A",
-          "datasource": "Prometheus",
-          "expr": "sum(rate(otelcol_receiver_accepted_metric_points[5m]))",
-          "legendFormat": "accepted points/sec"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short"
-        }
-      }
     }
   ]
 }

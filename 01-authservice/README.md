@@ -44,7 +44,6 @@ Client App -> Kong Gateway -> Auth Service -> Keycloak
 - Spring Data JPA + Flyway
 - H2 by default, PostgreSQL for containerized environments
 - pgJDBC `42.7.11` for secure PostgreSQL connectivity
-- OpenTelemetry-ready logs, traces, and metrics export via OTLP
 - Podman-compatible `src/docker/Dockerfile`
 
 ### Auth Design
@@ -220,14 +219,6 @@ podman run -d \
 | `APP_CUSTOMER_ROLE` | No | `customer` | Keycloak role representing customer users |
 | `APP_CORPORATE_ROLE` | No | `corporate` | Keycloak role representing corporate users |
 | `APP_LOG_FILE_PATH` | No | `logs/authservice.log` | Local file where structured application logs are written |
-| `OTEL_SERVICE_NAME` | No | `authservice` | Service name used in OpenTelemetry resources |
-| `OTEL_SERVICE_NAMESPACE` | No | `voyagevibes` | Service namespace attached to exported telemetry |
-| `OTEL_TRACING_EXPORT_ENABLED` | No | `false` | Enable OTLP trace export |
-| `OTEL_METRICS_EXPORT_ENABLED` | No | `false` | Enable OTLP metrics export |
-| `OTEL_LOGS_EXPORT_ENABLED` | No | `false` | Enable OTLP log export |
-| `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT` | No | `http://localhost:4318/v1/traces` | OTLP traces endpoint |
-| `OTEL_EXPORTER_OTLP_METRICS_ENDPOINT` | No | `http://localhost:4318/v1/metrics` | OTLP metrics endpoint |
-| `OTEL_EXPORTER_OTLP_LOGS_ENDPOINT` | No | `http://localhost:4318/v1/logs` | OTLP logs endpoint |
 | `DB_URL` | No | in-memory H2 | Database connection string |
 | `DB_USERNAME` | No | `sa` | Database user |
 | `DB_PASSWORD` | No | empty | Database password |
@@ -239,27 +230,7 @@ podman run -d \
 - Structured file logs are written to `logs/authservice.log` by default.
 - Override the log file destination with `APP_LOG_FILE_PATH`.
 - Every API request is logged once with method, path, status, and latency.
-- Trace and span ids are included in every log line so request logs, app logs, and distributed traces can be correlated quickly.
 - Request bodies are not logged, which keeps auth tokens and personal data out of logs.
-
-## OpenTelemetry
-
-This service can export all three signals to an OTLP collector:
-
-- traces through the Spring Boot and Micrometer OpenTelemetry bridge
-- metrics through the Micrometer OTLP registry
-- logs through the OpenTelemetry Logback appender and OTLP log exporter
-
-To enable export, set these env vars:
-
-- `OTEL_TRACING_EXPORT_ENABLED=true`
-- `OTEL_METRICS_EXPORT_ENABLED=true`
-- `OTEL_LOGS_EXPORT_ENABLED=true`
-- `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=http://otel-collector:4318/v1/traces`
-- `OTEL_EXPORTER_OTLP_METRICS_ENDPOINT=http://otel-collector:4318/v1/metrics`
-- `OTEL_EXPORTER_OTLP_LOGS_ENDPOINT=http://otel-collector:4318/v1/logs`
-
-These env vars bind into `app.observability.telemetry.*`, so telemetry remains optional and disabled until one or more export flags are set to `true`.
 
 ## Keycloak Connectivity Diagnosis
 

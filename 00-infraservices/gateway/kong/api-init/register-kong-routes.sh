@@ -6,8 +6,6 @@ auth_service_runtime="${AUTH_SERVICE_RUNTIME:-development}"
 auth_service_port="${AUTH_SERVICE_PORT:-8081}"
 auth_service_dev_url="${AUTH_SERVICE_DEV_URL:-http://host.containers.internal:${auth_service_port}/auth}"
 auth_service_prod_url="${AUTH_SERVICE_PROD_URL:-http://auth-service:${auth_service_port}/auth}"
-demo_service_dev_url="${DEMO_SERVICE_DEV_URL:-http://host.containers.internal:${auth_service_port}/demo}"
-demo_service_prod_url="${DEMO_SERVICE_PROD_URL:-http://auth-service:${auth_service_port}/demo}"
 customer_api_host="${CUSTOMER_API_HOST:-customer-api.voyagevibes.in}"
 corporate_api_host="${CORPORATE_API_HOST:-corp-api.voyagevibes.in}"
 
@@ -41,34 +39,6 @@ resolve_auth_service_url() {
   configured_url="${configured_url%/}"
   if [[ "${configured_url}" != */auth ]]; then
     configured_url="${configured_url}/auth"
-  fi
-
-  echo "${configured_url}"
-}
-
-resolve_demo_service_url() {
-  local configured_url
-
-  if [[ -n "${DEMO_SERVICE_URL:-}" ]]; then
-    configured_url="${DEMO_SERVICE_URL}"
-  else
-    case "${auth_service_runtime}" in
-      development)
-        configured_url="${demo_service_dev_url}"
-        ;;
-      production)
-        configured_url="${demo_service_prod_url}"
-        ;;
-      *)
-        echo "unsupported AUTH_SERVICE_RUNTIME: ${auth_service_runtime}" >&2
-        exit 1
-        ;;
-    esac
-  fi
-
-  configured_url="${configured_url%/}"
-  if [[ "${configured_url}" != */demo ]]; then
-    configured_url="${configured_url}/demo"
   fi
 
   echo "${configured_url}"
@@ -130,19 +100,13 @@ ensure_route() {
 wait_for_kong
 
 auth_service_url="$(resolve_auth_service_url)"
-demo_service_url="$(resolve_demo_service_url)"
 
 echo "registering auth-service upstream: ${auth_service_url}"
-echo "registering demo-service upstream: ${demo_service_url}"
 
 ensure_service "auth-service" "${auth_service_url}"
-ensure_service "demo-service" "${demo_service_url}"
 
 ensure_route "auth-service" "auth-api-local" "localhost" "true" "/api/v1/auth"
-ensure_route "demo-service" "demo-api-local" "localhost" "true" "/api/v1/demo"
 
 ensure_route "auth-service" "customer-auth-api" "${customer_api_host}" "true" "/api/v1/auth"
-ensure_route "demo-service" "customer-demo-api" "${customer_api_host}" "true" "/api/v1/demo"
 
 ensure_route "auth-service" "corp-auth-api" "${corporate_api_host}" "true" "/api/v1/auth"
-ensure_route "demo-service" "corp-demo-api" "${corporate_api_host}" "true" "/api/v1/demo"

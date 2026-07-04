@@ -25,21 +25,10 @@ server:
   forward-headers-strategy: framework
 
 management:
-  tracing:
-    sampling:
-      probability: ${OTEL_TRACING_SAMPLING_PROBABILITY:1.0}
-
   endpoints:
     web:
       exposure:
         include: health,info
-
-  otlp:
-    metrics:
-      export:
-        enabled: ${OTEL_METRICS_EXPORT_ENABLED:false}
-        url: ${OTEL_EXPORTER_OTLP_METRICS_ENDPOINT:http://localhost:4318/v1/metrics}
-        step: ${OTEL_METRICS_EXPORT_STEP:1m}
 
   endpoint:
     health:
@@ -65,7 +54,7 @@ logging:
     root: INFO
     in.cloudxplorer.authservice: INFO
   pattern:
-    console: "%d{yyyy-MM-dd'T'HH:mm:ss.SSSXXX} level=%-5p service=${spring.application.name} trace=%X{traceId:-} span=%X{spanId:-} logger=%logger{36} message=%msg%n"
+    console: "%d{yyyy-MM-dd'T'HH:mm:ss.SSSXXX} level=%-5p service=${spring.application.name} logger=%logger{36} message=%msg%n"
 
 springdoc:
   swagger-ui:
@@ -133,20 +122,6 @@ app:
       - code: super-admin
         display-name: Super Admin
         description: Privileged platform administrators with elevated operational access.
-
-  observability:
-    service-name: ${OTEL_SERVICE_NAME:${spring.application.name}}
-    service-namespace: ${OTEL_SERVICE_NAMESPACE:voyagevibes}
-    telemetry:
-      trace:
-        enabled: ${OTEL_TRACING_EXPORT_ENABLED:false}
-        endpoint: ${OTEL_EXPORTER_OTLP_TRACES_ENDPOINT:http://localhost:4318/v1/traces}
-        timeout: ${OTEL_TRACING_TIMEOUT:10s}
-      logs:
-        enabled: ${OTEL_LOGS_EXPORT_ENABLED:false}
-        endpoint: ${OTEL_EXPORTER_OTLP_LOGS_ENDPOINT:http://localhost:4318/v1/logs}
-        timeout: ${OTEL_LOGS_TIMEOUT:10s}
-        transport: ${OTEL_LOGS_TRANSPORT:http}
 
   logging:
     file-path: ${APP_LOG_FILE_PATH:logs/authservice.log}

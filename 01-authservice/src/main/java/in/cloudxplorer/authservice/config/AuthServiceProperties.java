@@ -14,7 +14,6 @@ public class AuthServiceProperties {
 
     private final Keycloak keycloak = new Keycloak();
     private final Security security = new Security();
-    private final Observability observability = new Observability();
     private final Logging logging = new Logging();
 
     public Keycloak getKeycloak() {
@@ -23,10 +22,6 @@ public class AuthServiceProperties {
 
     public Security getSecurity() {
         return security;
-    }
-
-    public Observability getObservability() {
-        return observability;
     }
 
     public Logging getLogging() {
@@ -320,112 +315,6 @@ public class AuthServiceProperties {
 
         public void setAllowedOrigins(List<String> allowedOrigins) {
             this.allowedOrigins = allowedOrigins;
-        }
-    }
-
-    public static class Observability {
-
-        private String serviceName;
-        private String serviceNamespace = "voyagevibes";
-        private final Telemetry telemetry = new Telemetry();
-
-        public String getServiceName() {
-            return serviceName;
-        }
-
-        public void setServiceName(String serviceName) {
-            this.serviceName = serviceName;
-        }
-
-        public String getServiceNamespace() {
-            return serviceNamespace;
-        }
-
-        public void setServiceNamespace(String serviceNamespace) {
-            this.serviceNamespace = serviceNamespace;
-        }
-
-        public Telemetry getTelemetry() {
-            return telemetry;
-        }
-    }
-
-    public static class Telemetry {
-
-        private final Trace trace = new Trace();
-        private final Metrics metrics = new Metrics();
-        private final Logs logs = new Logs();
-
-        public Trace getTrace() {
-            return trace;
-        }
-
-        public Metrics getMetrics() {
-            return metrics;
-        }
-
-        public Logs getLogs() {
-            return logs;
-        }
-    }
-
-    public static class SignalExport {
-
-        private boolean enabled;
-        private String endpoint;
-        private Duration timeout = Duration.ofSeconds(10);
-
-        public boolean isEnabled() {
-            return enabled;
-        }
-
-        public void setEnabled(boolean enabled) {
-            this.enabled = enabled;
-        }
-
-        public String getEndpoint() {
-            return endpoint;
-        }
-
-        public void setEndpoint(String endpoint) {
-            this.endpoint = endpoint;
-        }
-
-        public Duration getTimeout() {
-            return timeout;
-        }
-
-        public void setTimeout(Duration timeout) {
-            this.timeout = timeout;
-        }
-    }
-
-    public static class Trace extends SignalExport {
-    }
-
-    public static class Metrics extends SignalExport {
-
-        private Duration step = Duration.ofMinutes(1);
-
-        public Duration getStep() {
-            return step;
-        }
-
-        public void setStep(Duration step) {
-            this.step = step;
-        }
-    }
-
-    public static class Logs extends SignalExport {
-
-        private String transport = "http";
-
-        public String getTransport() {
-            return transport;
-        }
-
-        public void setTransport(String transport) {
-            this.transport = transport;
         }
     }
 

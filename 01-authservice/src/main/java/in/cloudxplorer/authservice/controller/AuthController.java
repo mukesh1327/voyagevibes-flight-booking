@@ -123,7 +123,7 @@ public class AuthController {
     @GetMapping("/test/error-rate")
     @Operation(
             summary = "Generate a synthetic success or failure response",
-            description = "Useful for exercising dashboards, tracing, and error-rate alerting without impacting real login flows."
+            description = "Useful for exercising dashboards and error-rate alerting without impacting real login flows."
     )
     public SyntheticErrorRateResponse testErrorRate(
             @RequestParam(name = "failureRatePercent", defaultValue = "20")
