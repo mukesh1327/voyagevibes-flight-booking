@@ -1,0 +1,45 @@
+services:
+  flight-mssql:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: flight-mssql
+    restart: always
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: ${FLIGHT_MSSQL_PASSWORD:-FlightPass123!}
+      MSSQL_PID: Developer
+    ports:
+      - "${FLIGHT_MSSQL_HOST_PORT:-14333}:1433"
+    volumes:
+      - flight-mssql-data:/var/opt/mssql
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$${MSSQL_SA_PASSWORD}\" -C -Q \"SELECT 1\" || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+    networks:
+      - flight-booking-network
+
+  flight-service:
+    build:
+      context: .
+      dockerfile: ./src/FlightService/Containerfile
+    container_name: flight-service
+    restart: always
+    environment:
+      ASPNETCORE_URLS: http://+:8083
+      ConnectionStrings__FlightDb: ${FLIGHT_DB_URL:-Server=flight-mssql,1433;Database=flightdb;User Id=sa;Password=FlightPass123!;TrustServerCertificate=True}
+    depends_on:
+      flight-mssql:
+        condition: service_healthy
+    ports:
+      - "${FLIGHT_SERVICE_HOST_PORT:-8083}:8083"
+    networks:
+      - flight-booking-network
+
+networks:
+  flight-booking-network:
+    name: flight-booking-network
+    driver: bridge
+
+volumes:
+  flight-mssql-data:

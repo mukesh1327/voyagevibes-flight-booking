@@ -6,6 +6,21 @@ VoyageVibes is a flight booking app with a React customer UI, Kong Gateway, Keyc
 
 Customer users sign in with Google through Keycloak identity brokering. Corporate users sign in through the configured workforce identity flow. The auth service remains the application boundary for login bootstrap metadata, authorization-code exchange, JWT validation, logout, and customer identity operations.
 
+## Real-Time Booking Scope
+
+The app now follows the core flow used by common flight booking products such as Ixigo, IndiGo, and MakeMyTrip, while staying small enough for local microservice development:
+
+1. Search live route/date inventory through Kong.
+2. Show available flights with fare, departure time, and seats left.
+3. Hold the selected seats in Flight Service before creating a booking.
+4. Store a user-owned booking with passengers, hold id, fare, and checkout status.
+5. Reuse a pending payment order when checkout is retried.
+6. Verify Razorpay signature or local mock signature.
+7. Mark the booking `CONFIRMED` or `FAILED`.
+8. Send an idempotent confirmation notification.
+
+This is intentionally not a full airline system. Seat maps, PNR provider integrations, refunds, coupons, fare families, baggage add-ons, and schedule-change workflows are future services. The current version is ready to add those services because every capability already has a clear owner and database boundary.
+
 ## Infrastructure
 
 | Component | Database | http Port | https Port |
@@ -28,18 +43,61 @@ registry.redhat.io/rhel9/postgresql-16:latest
 
 ## Services
 
-| Service                                     | DB port     | DB port outside container   | http port | https port |
-|---------------------------------------------|-------------|-----------------------------|-----------|------------|
-| [Auth service](./01-authservice/README.md)  | 5432        | 5433                        | 8081      | 7071       |
+| Service                                           | Database   | DB outside container | http port |
+|---------------------------------------------------|------------|----------------------|-----------|
+| [Auth service](./01-authservice/README.md)        | PostgreSQL | 5433                 | 8081      |
+| [Flight service](./02-flightservice/README.md)    | SQL Server | 14333                | 8083      |
+| [Booking service](./03-bookingservice/README.md)  | MongoDB    | 27017                | 8084      |
+| [Payment service](./04-paymentservice/README.md)  | PostgreSQL | 5433                 | 8085      |
+| [Notification service](./05-notificationservice/README.md) | Redis | 6379 | 8086 |
 
 **Images used for services**
 
-- Auth service  
+- Auth service
 registry.redhat.io/ubi9/openjdk-17@sha256:615a2e789a3b2d982ec9e126d525697032440b1eace5dfea4fe6618cc85a7935
+
+- Flight service
+mcr.microsoft.com/dotnet/aspnet:8.0
+
+- Booking service
+node:22-alpine
+
+- Payment service
+python:3.12-slim
+
+- Notification service
+golang:1.23-alpine and alpine:3.21
 
 ## One-Day Project Completion Plan
 
 Keep the app simple: users log in, search flights, create a booking, pay through Razorpay, and receive a booking confirmation. Avoid building airline-grade scheduling, seat maps, refunds, coupons, loyalty, or admin-heavy workflows on day one.
+
+### Current Implementation
+
+The five-service version is scaffolded in this repo:
+
+- `01-authservice`: Spring Boot auth service with Google/Keycloak login.
+- `02-flightservice`: .NET 8 + SQL Server flight search service.
+- `03-bookingservice`: Node.js + MongoDB booking workflow service.
+- `04-paymentservice`: FastAPI + PostgreSQL Razorpay payment service with local mock mode.
+- `05-notificationservice`: Go + Redis idempotent notification service.
+
+Run the full stack with:
+
+```sh
+podman compose -f docker-compose.yml up -d --build
+```
+
+Useful local checks:
+
+```sh
+cd voyagevibes && npm run lint && npm run build
+cd ../03-bookingservice/src && npm test
+cd ../../04-paymentservice && pytest tests
+cd ../05-notificationservice && go test ./...
+```
+
+Install the .NET 8 SDK before running `dotnet test` for `02-flightservice`.
 
 ### Target Microservices
 
@@ -58,11 +116,13 @@ Build five small services behind Kong Gateway. The Spring Boot auth service alre
 1. Customer signs in with Google.
 2. Frontend calls `/api/v1/auth/me` and stores user profile in session state.
 3. Customer searches flights by `from`, `to`, and `date`.
-4. Customer creates a booking with one flight and passenger details.
-5. Payment service creates a Razorpay order for the booking amount.
-6. Frontend completes Razorpay checkout and sends payment callback data to Payment Service.
-7. Booking Service marks booking as `CONFIRMED`.
-8. Notification Service sends or mocks a confirmation email.
+4. Frontend shows fare, departure time, and live seats left.
+5. Booking Service asks Flight Service to hold seats atomically.
+6. Booking Service creates a booking only after the hold succeeds.
+7. Payment Service creates or reuses a Razorpay order for the booking amount.
+8. Frontend completes Razorpay checkout and sends payment callback data to Payment Service.
+9. Booking Service marks booking as `CONFIRMED` or `FAILED`.
+10. Notification Service sends or mocks a confirmation email idempotently.
 
 ### Service Contracts
 
@@ -73,11 +133,54 @@ Use simple REST and JWT forwarding through Kong. Every protected service should 
 | `/api/v1/auth/frontend-config` | GET | Auth | Frontend login bootstrap |
 | `/api/v1/auth/me` | GET | Auth | Current user details |
 | `/api/v1/flights/search?from=&to=&date=` | GET | Flight | Return available flights |
-| `/api/v1/bookings` | POST | Booking | Create booking draft |
+| `/api/v1/flights/{id}/hold` | POST | Flight | Atomically hold 1-6 seats for checkout |
+| `/api/v1/bookings` | POST | Booking | Hold inventory and create payment-pending booking |
 | `/api/v1/bookings/{id}` | GET | Booking | Read booking status |
+| `/api/v1/bookings/{id}/status` | PATCH | Booking | Move booking through explicit payment states |
 | `/api/v1/payments/orders` | POST | Payment | Create Razorpay order for booking |
 | `/api/v1/payments/verify` | POST | Payment | Verify Razorpay payment signature |
+| `/api/v1/payments/orders/by-booking/{bookingId}` | GET | Payment | Finance/support payment reconciliation lookup |
 | `/api/v1/notifications/booking-confirmed` | POST | Notification | Send confirmation email or mock event |
+
+### Customer And Employee Pages
+
+The app now differentiates pages by the authenticated user's base role:
+
+- `customer` users land on the customer dashboard and booking flow. They search flights, hold seats, checkout, pay, and receive confirmation.
+- `corporate` users land on the employee workspace. The workspace shows tools based on `corporateRoles`.
+
+Employee role ownership:
+
+| Role | Page Tools | Service Owner |
+|------|------------|---------------|
+| `flight-admin` | Route/date inventory search, fare updates, seat count updates, timing corrections | Flight Service |
+| `support-desk` | Booking lookup by booking id or passenger email, payment status lookup | Booking Service + Payment Service |
+| `booking-ops` | Booking support lookup for customer query resolution | Booking Service |
+| `finance-ops` | Payment reconciliation by booking id | Payment Service |
+| `platform-admin` / `super-admin` | Service health visibility and cross-team operations access | Platform/Infrastructure |
+
+Operational endpoints used by the employee workspace:
+
+| Endpoint | Method | Role |
+|----------|--------|------|
+| `/api/v1/flights/{id}` | PATCH | `flight-admin`, `platform-admin`, `super-admin` |
+| `/api/v1/bookings/support/search?bookingId=&email=` | GET | `support-desk`, `booking-ops`, `platform-admin`, `super-admin` |
+| `/api/v1/payments/orders/by-booking/{bookingId}` | GET | `finance-ops`, `support-desk`, `platform-admin`, `super-admin` |
+| `/api/v1/{service}/health` | GET | Platform status checks through Kong |
+
+For local development, Kong forwards the user's bearer token and the React app sends `x-user-id` plus comma-separated `x-user-roles`. In production, these trusted identity headers should be set by the gateway after JWT validation, not by browser code.
+
+### Gateway Integration
+
+The React app should call only `/api/v1/...` paths. Vite proxies those paths to Kong in local development, and the containerized UI proxies them to `kong-gateway:8000`. Backend services should not be called directly from browser code.
+
+Kong routes:
+
+- `/api/v1/auth` -> Spring Boot auth service
+- `/api/v1/flights` -> .NET Flight Service
+- `/api/v1/bookings` -> Node Booking Service
+- `/api/v1/payments` -> FastAPI Payment Service
+- `/api/v1/notifications` -> Go Notification Service
 
 ### Data Model
 
@@ -86,10 +189,11 @@ Keep each database owned by one service. Do not share tables between services.
 **Flight Service - SQL Server**
 - `airports(id, code, city, name)`
 - `flights(id, flight_no, origin, destination, departure_time, arrival_time, price, seats_available)`
+- Holds are represented by atomic decrements on `seats_available` in this local version. A future inventory service can replace this with expiring hold rows and airline/GDS sync.
 
 **Booking Service - MongoDB**
-- `bookings`: `{ id, userId, flightId, passengers, amount, status, paymentId, createdAt }`
-- Status values: `DRAFT`, `PAYMENT_PENDING`, `CONFIRMED`, `FAILED`
+- `bookings`: `{ id, userId, flightId, flightNo, holdId, holdExpiresAt, seatsHeld, passengers, amount, status, paymentId, createdAt }`
+- Status values: `PAYMENT_PENDING`, `CONFIRMED`, `FAILED`
 
 **Payment Service - PostgreSQL**
 - `payment_orders(id, booking_id, razorpay_order_id, amount, currency, status, created_at)`
@@ -98,6 +202,15 @@ Keep each database owned by one service. Do not share tables between services.
 **Notification Service - Redis**
 - Key: `notification:booking:{bookingId}`
 - Value: `PENDING`, `SENT`, or `FAILED`
+
+### Real-Time Use Cases Covered
+
+- **Inventory race**: two users can click the same flight, but Flight Service holds seats with an atomic update and rejects sold-out requests.
+- **Checkout retry**: refreshing the payment step reuses an existing `CREATED` payment order for the same booking/amount/currency.
+- **Payment mismatch**: Payment Service rejects verification when the Razorpay order does not belong to the booking.
+- **Duplicate confirmation**: Notification Service stores a Redis idempotency key so repeated confirmation calls return duplicate status instead of sending again.
+- **Gateway-only UI**: Frontend code uses `/api/v1` paths, so the browser integration stays stable when services move behind Kong.
+- **Simple developer mode**: Razorpay uses mock order/signature behavior when keys are not configured, while the same endpoints support real keys later.
 
 ### Clean Code Rules
 
@@ -113,6 +226,25 @@ Keep each database owned by one service. Do not share tables between services.
   - Booking: use a map/set for idempotency checks.
   - Payment verification: constant-time signature comparison where supported.
   - Notification: use Redis key TTL/idempotency to avoid duplicate sends.
+
+### Service Code Structure
+
+Keep each service easy to scan by separating startup, routes, business logic, and persistence:
+
+- `02-flightservice/src/FlightService/Program.cs`: app startup and dependency registration.
+- `02-flightservice/src/FlightService/Endpoints`: minimal API route mappings.
+- `02-flightservice/src/FlightService/*Service.cs`: flight search and inventory hold rules.
+- `03-bookingservice/src/server.js`: Express startup and shared middleware.
+- `03-bookingservice/src/routes`: HTTP routes only.
+- `03-bookingservice/src/services`: validation, DTO mapping, flight client, booking use cases.
+- `03-bookingservice/src/models`: Mongoose models and booking status transitions.
+- `04-paymentservice/app/main.py`: FastAPI startup and router registration.
+- `04-paymentservice/app/api`: route handlers.
+- `04-paymentservice/app/services`: payment use cases and Razorpay provider integration.
+- `04-paymentservice/app/models`, `schemas`, `db`, `core`: database models, request/response contracts, session setup, settings.
+- `05-notificationservice/cmd/server`: process startup.
+- `05-notificationservice/internal/httpapi`: Gin routes.
+- `05-notificationservice/internal/notification`: notification business rules.
 
 ### One-Day Sprint
 

@@ -1,0 +1,45 @@
+services:
+  payment-postgres-init:
+    image: registry.redhat.io/rhel9/postgresql-16:latest
+    container_name: payment-postgres-init
+    restart: "no"
+    env_file:
+      - ../00-infraservices/databases/postgres/.env
+    command: >
+      sh -ec "
+        until pg_isready -h platform-postgres -U $$POSTGRESQL_USER -d $$POSTGRESQL_DATABASE; do sleep 2; done;
+        psql -h platform-postgres -U $$POSTGRESQL_USER -d $$POSTGRESQL_DATABASE -v ON_ERROR_STOP=1 -f /init/payment-init.sql
+      "
+    depends_on:
+      platform-postgres:
+        condition: service_healthy
+    volumes:
+      - ./init-db:/init:ro,Z
+    networks:
+      - flight-booking-network
+
+  payment-service:
+    build:
+      context: .
+      dockerfile: ./app/Containerfile
+    container_name: payment-service
+    restart: always
+    environment:
+      PORT: 8085
+      DATABASE_URL: ${PAYMENT_DATABASE_URL:-postgresql+psycopg://paymentservice:paymentservice@platform-postgres:5432/paymentdb}
+      RAZORPAY_KEY_ID: ${RAZORPAY_KEY_ID:-}
+      RAZORPAY_KEY_SECRET: ${RAZORPAY_KEY_SECRET:-}
+    depends_on:
+      platform-postgres:
+        condition: service_healthy
+      payment-postgres-init:
+        condition: service_completed_successfully
+    ports:
+      - "${PAYMENT_SERVICE_HOST_PORT:-8085}:8085"
+    networks:
+      - flight-booking-network
+
+networks:
+  flight-booking-network:
+    name: flight-booking-network
+    driver: bridge

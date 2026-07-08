@@ -1,0 +1,44 @@
+services:
+  booking-mongodb:
+    image: docker.io/mongo:7
+    container_name: booking-mongodb
+    restart: always
+    environment:
+      MONGO_INITDB_DATABASE: bookingdb
+    ports:
+      - "${BOOKING_MONGODB_HOST_PORT:-27017}:27017"
+    volumes:
+      - booking-mongodb-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - flight-booking-network
+
+  booking-service:
+    build:
+      context: .
+      dockerfile: ./src/Containerfile
+    container_name: booking-service
+    restart: always
+    environment:
+      PORT: 8084
+      MONGODB_URI: ${BOOKING_MONGODB_URI:-mongodb://booking-mongodb:27017/bookingdb}
+      FLIGHT_SERVICE_URL: ${FLIGHT_SERVICE_URL:-http://flight-service:8083}
+    depends_on:
+      booking-mongodb:
+        condition: service_healthy
+    ports:
+      - "${BOOKING_SERVICE_HOST_PORT:-8084}:8084"
+    networks:
+      - flight-booking-network
+
+networks:
+  flight-booking-network:
+    name: flight-booking-network
+    driver: bridge
+
+volumes:
+  booking-mongodb-data:

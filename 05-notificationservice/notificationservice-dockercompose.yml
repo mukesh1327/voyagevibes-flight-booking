@@ -1,0 +1,42 @@
+services:
+  notification-redis:
+    image: docker.io/redis:7-alpine
+    container_name: notification-redis
+    restart: always
+    ports:
+      - "${NOTIFICATION_REDIS_HOST_PORT:-6379}:6379"
+    volumes:
+      - notification-redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - flight-booking-network
+
+  notification-service:
+    build:
+      context: .
+      dockerfile: ./Containerfile
+    container_name: notification-service
+    restart: always
+    environment:
+      PORT: 8086
+      REDIS_ADDR: notification-redis:6379
+      MOCK_EMAIL: "true"
+    depends_on:
+      notification-redis:
+        condition: service_healthy
+    ports:
+      - "${NOTIFICATION_SERVICE_HOST_PORT:-8086}:8086"
+    networks:
+      - flight-booking-network
+
+networks:
+  flight-booking-network:
+    name: flight-booking-network
+    driver: bridge
+
+volumes:
+  notification-redis-data:

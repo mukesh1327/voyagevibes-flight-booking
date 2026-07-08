@@ -1,0 +1,16 @@
+{
+  "name": "booking-service",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test ../tests/*.test.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "mongoose": "^8.9.5",
+    "uuid": "^11.0.5"
+  }
+}

@@ -57,6 +57,10 @@ pnpm-debug.log*
 lerna-debug.log*
 
 node_modules
+bin/
+obj/
+__pycache__/
+*.py[cod]
 dist
 dist-ssr
 *.local

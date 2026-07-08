@@ -18,5 +18,17 @@ include:
 # Authservice
   - ./01-authservice/authservice-dockercompose.yml
 
+# Flight Service
+  - ./02-flightservice/flightservice-dockercompose.yml
+
+# Booking Service
+  - ./03-bookingservice/bookingservice-dockercompose.yml
+
+# Payment Service
+  - ./04-paymentservice/paymentservice-dockercompose.yml
+
+# Notification Service
+  - ./05-notificationservice/notificationservice-dockercompose.yml
+
 # Voyage Vibes UI
   - ./voyagevibes/voyagevibes-ui-dockercompose.yml

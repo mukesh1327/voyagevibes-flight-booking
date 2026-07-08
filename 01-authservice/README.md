@@ -125,8 +125,9 @@ The bundled `flight-auth-admin` client is configured for client-credentials acce
 In Google Cloud Console:
 
 1. Create OAuth credentials.
-2. Add the redirect URI:
-   `http://localhost:8080/realms/flight-booking/broker/google/endpoint`
+2. Add the Keycloak broker redirect URI for the hostname you run:
+   - Local/dev HTTPS: `https://keycloak.voyagevibes.in:8091/realms/flight-booking/broker/google/endpoint`
+   - Local plain HTTP, if you run Keycloak that way: `http://localhost:8080/realms/flight-booking/broker/google/endpoint`
 
 In Keycloak:
 
@@ -137,6 +138,10 @@ In Keycloak:
 5. Keep the included mapper that assigns Google-brokered users to the `/customers` group.
 
 The imported `/customers` group already grants the `customer` realm role, so Google-brokered users inherit the base customer access expected by the auth-service.
+
+If Keycloak shows `Unexpected error when authenticating with identity provider`, check the Keycloak container logs. A log like `UnknownHostException: oauth2.googleapis.com` means Keycloak could not resolve or reach Google's token endpoint from inside Podman; the bundled compose file pins public DNS fallbacks for the Keycloak container. A Google page saying `redirect_uri_mismatch` means the Google OAuth client is missing the Keycloak broker redirect URI above.
+
+For the VoyageVibes frontend itself, the Keycloak OIDC client `flight-auth-service` must allow the browser callback URI. The bundled realm includes `https://auth.voyagevibes.in/callback`, `https://auth.voyagevibes.in/*`, and localhost callbacks for development.
 
 ### 4. Configure Corporate Federation
 
