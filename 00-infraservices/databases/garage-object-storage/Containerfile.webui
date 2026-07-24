@@ -1,0 +1,5 @@
+FROM docker.io/library/busybox:1.37.0-uclibc AS healthcheck
+
+FROM docker.io/khairul169/garage-webui:1.1.0
+
+COPY --from=healthcheck /bin/busybox /bin/busybox

@@ -1,0 +1,313 @@
+x-otel-environment: &otel-environment
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+  OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
+  OTEL_TRACES_EXPORTER: otlp
+  OTEL_METRICS_EXPORTER: otlp
+  OTEL_LOGS_EXPORTER: otlp
+  OTEL_PROPAGATORS: tracecontext,baggage
+  OTEL_TRACES_SAMPLER: parentbased_always_on
+  OTEL_RESOURCE_ATTRIBUTES: service.namespace=voyagevibes,deployment.environment.name=local
+
+services:
+  kafka:
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - /opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9192 >/dev/null 2>&1
+      interval: 10s
+      timeout: 10s
+      retries: 12
+      start_period: 20s
+
+  platform_garage_standalone-webui:
+    image: voyagevibes/garage-webui:1.1.0-healthcheck
+    build:
+      context: ./00-infraservices/databases/garage-object-storage
+      dockerfile: ./Containerfile.webui
+    healthcheck:
+      test:
+        - CMD
+        - /bin/busybox
+        - wget
+        - -q
+        - -O
+        - /dev/null
+        - http://127.0.0.1:3909/
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 20s
+
+  platform-postgres:
+    image: docker.io/library/postgres:16
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    volumes:
+      - platform-postgres-data:/var/lib/postgresql/data
+
+  keycloak-postgres-init:
+    image: docker.io/library/postgres:16
+    environment:
+      PGPASSWORD: postgres
+
+  kong-postgres-init:
+    image: docker.io/library/postgres:16
+    environment:
+      PGPASSWORD: postgres
+
+  kong-migrations:
+    environment:
+      KONG_PG_HOST: host.containers.internal
+
+  kong-gateway:
+    environment:
+      KONG_PG_HOST: host.containers.internal
+
+  auth-postgres-init:
+    image: docker.io/library/postgres:16
+    environment:
+      PGPASSWORD: postgres
+
+  payment-postgres-init:
+    image: docker.io/library/postgres:16
+    environment:
+      PGPASSWORD: postgres
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:25.0
+
+  kong-routes-init:
+    image: voyagevibes/kong-routes-init:local
+    build:
+      context: ./00-infraservices/gateway/kong/api-init
+      dockerfile: ./Containerfile
+    command:
+      - /bin/sh
+      - -ec
+      - |
+        host_gateway=$$(ip route | awk '/default/ { print $$3; exit }')
+        export AUTH_SERVICE_PROD_URL="http://$${host_gateway}:8082/auth"
+        export FLIGHT_SERVICE_PROD_URL="http://$${host_gateway}:8083/flights"
+        export BOOKING_SERVICE_PROD_URL="http://$${host_gateway}:8084/bookings"
+        export PAYMENT_SERVICE_PROD_URL="http://$${host_gateway}:8085/payments"
+        export NOTIFICATION_SERVICE_PROD_URL="http://$${host_gateway}:8086/notifications"
+        tr -d '\r' < /opt/bootstrap/register-kong-routes.sh > /tmp/register-kong-routes.sh
+        exec /bin/bash /tmp/register-kong-routes.sh
+
+  voyagevibes-ui:
+    depends_on:
+      kong-gateway:
+        condition: service_started
+
+  auth-service:
+    environment:
+      <<: *otel-environment
+      OTEL_SERVICE_NAME: auth-service
+      DB_USERNAME: authservice
+      DB_PASSWORD: authservice
+      DB_DRIVER_CLASS_NAME: org.postgresql.Driver
+      JAVA_TOOL_OPTIONS: -javaagent:/otel/opentelemetry-javaagent.jar
+      OTEL_INSTRUMENTATION_LOGBACK_APPENDER_EXPERIMENTAL_LOG_ATTRIBUTES: "true"
+    depends_on:
+      otel-collector:
+        condition: service_started
+
+  flight-service:
+    environment:
+      <<: *otel-environment
+      OTEL_SERVICE_NAME: flight-service
+      CORECLR_ENABLE_PROFILING: "1"
+      CORECLR_PROFILER: "{918728DD-259F-4A6A-AC2B-B85E1B658318}"
+      CORECLR_PROFILER_PATH: /otel/dotnet-auto/linux-x64/OpenTelemetry.AutoInstrumentation.Native.so
+      DOTNET_ADDITIONAL_DEPS: /otel/dotnet-auto/AdditionalDeps
+      DOTNET_SHARED_STORE: /otel/dotnet-auto/store
+      DOTNET_STARTUP_HOOKS: /otel/dotnet-auto/net/OpenTelemetry.AutoInstrumentation.StartupHook.dll
+      OTEL_DOTNET_AUTO_HOME: /otel/dotnet-auto
+      OTEL_DOTNET_AUTO_LOGS_INSTRUMENTATION_ENABLED: "true"
+    depends_on:
+      otel-collector:
+        condition: service_started
+
+  booking-service:
+    environment:
+      <<: *otel-environment
+      OTEL_SERVICE_NAME: booking-service
+      NODE_OPTIONS: --require @opentelemetry/auto-instrumentations-node/register
+      OTEL_NODE_RESOURCE_DETECTORS: env,host,os,process
+    depends_on:
+      otel-collector:
+        condition: service_started
+
+  payment-service:
+    environment:
+      <<: *otel-environment
+      OTEL_SERVICE_NAME: payment-service
+      OTEL_PYTHON_LOGGING_AUTO_INSTRUMENTATION_ENABLED: "true"
+    command:
+      - opentelemetry-instrument
+      - uvicorn
+      - app.main:app
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8085"
+    depends_on:
+      otel-collector:
+        condition: service_started
+
+  notification-service:
+    volumes:
+      - notification_service_binary:/app
+    depends_on:
+      otel-collector:
+        condition: service_started
+
+  notification-go-auto:
+    build:
+      context: ./05-notificationservice
+      dockerfile: ./Containerfile
+      target: auto-instrumentation
+    container_name: notification-go-auto
+    restart: unless-stopped
+    privileged: true
+    pid: host
+    environment:
+      <<: *otel-environment
+      OTEL_SERVICE_NAME: notification-service
+      OTEL_GO_AUTO_TARGET_EXE: /app/notification-service
+    volumes:
+      - notification_service_binary:/app:ro
+      - /proc:/host/proc
+    depends_on:
+      notification-service:
+        condition: service_started
+      otel-collector:
+        condition: service_started
+    networks:
+      - flight-booking-network
+
+  voyagevibes-ui-auto:
+    image: docker.io/otel/ebpf-instrument:main
+    container_name: voyagevibes-ui-auto
+    restart: unless-stopped
+    privileged: true
+    pid: host
+    environment:
+      OTEL_EBPF_OPEN_PORT: "9001"
+      OTEL_SERVICE_NAME: voyagevibes-ui
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+      OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
+      OTEL_PROPAGATORS: tracecontext,baggage
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup
+      - /sys/kernel/security:/sys/kernel/security
+    depends_on:
+      voyagevibes-ui:
+        condition: service_started
+      otel-collector:
+        condition: service_started
+    networks:
+      - flight-booking-network
+
+  otel-collector:
+    image: docker.io/otel/opentelemetry-collector-contrib:0.157.0
+    container_name: otel-collector
+    restart: unless-stopped
+    command:
+      - --config=/etc/otelcol-contrib/config.yml
+    volumes:
+      - ./00-infraservices/observability/opentelemetry/config/otel-collector.yml:/etc/otelcol-contrib/config.yml:ro,Z
+    ports:
+      - "4317:4317"
+      - "4318:4318"
+      - "8889:8889"
+      - "13133:13133"
+    depends_on:
+      tempo:
+        condition: service_started
+      loki:
+        condition: service_started
+    networks:
+      - flight-booking-network
+
+  tempo:
+    image: docker.io/grafana/tempo:latest
+    container_name: tempo
+    restart: unless-stopped
+    command:
+      - -config.file=/etc/tempo.yaml
+    volumes:
+      - ./00-infraservices/observability/tempo/config/tempo-config.yml:/etc/tempo.yaml:ro,Z
+      - tempo_data:/tmp/tempo
+    ports:
+      - "3200:3200"
+      - "4320:4317"
+      - "4321:4318"
+    networks:
+      - flight-booking-network
+
+  prometheus:
+    image: docker.io/prom/prometheus:latest
+    container_name: prometheus
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --web.enable-remote-write-receiver
+      - --enable-feature=exemplar-storage
+      - --enable-feature=native-histograms
+    volumes:
+      - ./00-infraservices/observability/prometheus/config/prometheus.yml:/etc/prometheus/prometheus.yml:ro,Z
+      - prometheus_data:/prometheus
+    ports:
+      - "9091:9090"
+    networks:
+      - flight-booking-network
+
+  loki:
+    image: docker.io/grafana/loki:latest
+    container_name: loki
+    restart: unless-stopped
+    command:
+      - -config.file=/etc/loki/loki-config.yaml
+    volumes:
+      - ./00-infraservices/observability/loki/config/loki-config.yml:/etc/loki/loki-config.yaml:ro,Z
+      - loki_data:/tmp/loki
+    ports:
+      - "3100:3100"
+    networks:
+      - flight-booking-network
+
+  grafana:
+    image: docker.io/grafana/grafana:latest
+    container_name: grafana
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./00-infraservices/observability/grafana/provisioning:/etc/grafana/provisioning:ro,Z
+      - ./00-infraservices/observability/grafana/dashboards:/var/lib/grafana/dashboards:ro,Z
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+      - loki
+      - tempo
+    networks:
+      - flight-booking-network
+
+networks:
+  flight-booking-network:
+    name: flight-booking-network
+    driver: bridge
+
+volumes:
+  platform-postgres-data:
+  notification_service_binary:
+  grafana_data:
+  loki_data:
+  prometheus_data:
+  tempo_data:

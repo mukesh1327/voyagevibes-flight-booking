@@ -1,7 +1,8 @@
 FROM node:22-alpine
 WORKDIR /app
-COPY src/package.json ./
-RUN npm install --omit=dev
+COPY src/package.json src/package-lock.json ./
+RUN npm ci --omit=dev \
+    && npm install --no-save @opentelemetry/api @opentelemetry/auto-instrumentations-node
 COPY src ./
 EXPOSE 8084
 CMD ["npm", "start"]

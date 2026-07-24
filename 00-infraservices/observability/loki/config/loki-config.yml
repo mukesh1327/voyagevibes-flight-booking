@@ -5,7 +5,7 @@ auth_enabled: false
 server:
   http_listen_port: 3100
   grpc_listen_port: 9096
-  log_level: debug
+  log_level: info
   grpc_server_max_concurrent_streams: 1000
 
 common:
@@ -42,9 +42,7 @@ schema_config:
         period: 24h
 
 pattern_ingester:
-  enabled: true
-  metric_aggregation:
-    loki_address: localhost:3100
+  enabled: false
 
 ruler:
   alertmanager_url: http://localhost:9093

@@ -1,13 +1,35 @@
-FROM registry.redhat.io/ubi9/openjdk-17@sha256:615a2e789a3b2d982ec9e126d525697032440b1eace5dfea4fe6618cc85a7935
+FROM docker.io/library/eclipse-temurin:21-jdk AS build
+
+WORKDIR /workspace
+
+COPY .mvn ./.mvn
+COPY mvnw .
+COPY pom.xml .
+COPY src ./src
+
+RUN chmod +x mvnw \
+    && ./mvnw --batch-mode --no-transfer-progress -DskipTests package
+
+FROM docker.io/library/alpine:3.20 AS otel-agent
+
+ARG OTEL_JAVA_AGENT_VERSION=2.28.1
+
+RUN apk add --no-cache ca-certificates curl \
+    && mkdir -p /otel \
+    && curl --fail --location --silent --show-error \
+      "https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/download/v${OTEL_JAVA_AGENT_VERSION}/opentelemetry-javaagent.jar" \
+      --output /otel/opentelemetry-javaagent.jar
+
+FROM docker.io/library/eclipse-temurin:21-jre
 
 WORKDIR /app
 
 ARG PORT=808
-ARG JAR_FILE=target/authservice-0.0.1-SNAPSHOT.jar
 
 RUN mkdir -p /app/logs
 
-COPY ${JAR_FILE} app.jar
+COPY --from=build /workspace/target/authservice-0.0.1-SNAPSHOT.jar app.jar
+COPY --from=otel-agent /otel/opentelemetry-javaagent.jar /otel/opentelemetry-javaagent.jar
 
 EXPOSE ${PORT}
 

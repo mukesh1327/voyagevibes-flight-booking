@@ -1,0 +1,83 @@
+{
+  "realm": "flight-booking",
+  "enabled": true,
+  "displayName": "VoyageVibes",
+  "sslRequired": "external",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": true,
+  "roles": {
+    "realm": [
+      {
+        "name": "customer"
+      },
+      {
+        "name": "corporate"
+      },
+      {
+        "name": "flight-admin"
+      },
+      {
+        "name": "support-desk"
+      },
+      {
+        "name": "booking-ops"
+      },
+      {
+        "name": "finance-ops"
+      },
+      {
+        "name": "platform-admin"
+      },
+      {
+        "name": "super-admin"
+      }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "flight-auth-service",
+      "name": "VoyageVibes Auth Service",
+      "enabled": true,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "PublicApiSecret123$",
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": true,
+      "publicClient": false,
+      "redirectUris": [
+        "https://localhost:9001/*",
+        "http://localhost:9000/*",
+        "https://www.voyagevibes.in:9001/*",
+        "http://www.voyagevibes.in:9000/*",
+        "https://voyagevibes.in:9001/*",
+        "http://voyagevibes.in:9000/*",
+        "https://customer-ui.voyagevibes.in:9001/*",
+        "http://customer-ui.voyagevibes.in:9000/*",
+        "http://localhost:8081/*"
+      ],
+      "webOrigins": [
+        "https://localhost:9001",
+        "http://localhost:9000",
+        "https://www.voyagevibes.in:9001",
+        "http://www.voyagevibes.in:9000",
+        "https://voyagevibes.in:9001",
+        "http://voyagevibes.in:9000",
+        "https://customer-ui.voyagevibes.in:9001",
+        "http://customer-ui.voyagevibes.in:9000"
+      ]
+    },
+    {
+      "clientId": "flight-auth-admin",
+      "name": "VoyageVibes Auth Administration",
+      "enabled": true,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "CorpWebSecret123$",
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": true,
+      "publicClient": false
+    }
+  ]
+}

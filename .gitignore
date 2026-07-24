@@ -6,6 +6,7 @@
 00-infraservices/databases/postgres/.env
 
 00-infraservices/keycloak/realms/*
+!00-infraservices/keycloak/realms/flight-booking-realm.json
 
 #############################################################
 
