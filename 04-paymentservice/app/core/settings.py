@@ -11,6 +11,12 @@ class Settings:
         "KEYCLOAK_JWKS_URI",
         "https://keycloak:8091/realms/flight-booking/protocol/openid-connect/certs",
     )
+    keycloak_token_url = os.getenv(
+        "KEYCLOAK_TOKEN_URL",
+        "https://keycloak:8091/realms/flight-booking/protocol/openid-connect/token",
+    )
+    keycloak_service_client_id = os.getenv("KEYCLOAK_SERVICE_CLIENT_ID", "flight-auth-admin")
+    keycloak_service_client_secret = os.getenv("KEYCLOAK_SERVICE_CLIENT_SECRET", "CorpWebSecret123$")
 
 
 settings = Settings()

@@ -24,7 +24,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         // The realm's certificate is self-signed in this local/demo deployment.
         options.BackchannelHttpHandler = new HttpClientHandler
         {
-            ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidation,
+            ServerCertificateCustomValidationCallback = (_, _, _, _) => true,
         };
         options.MetadataAddress = keycloakMetadataAddress;
         options.TokenValidationParameters = new TokenValidationParameters

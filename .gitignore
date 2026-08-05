@@ -1,5 +1,6 @@
 00-infraservices/tmp/*
 01-authservice/.env
+/.env
 
 00-infraservices/keycloak/.env
 00-infraservices/gateway/kong/.env

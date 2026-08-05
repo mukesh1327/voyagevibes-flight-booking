@@ -30,6 +30,9 @@ services:
       PAYMENT_SERVICE_URL: ${PAYMENT_SERVICE_URL:-http://payment-service:8085}
       KEYCLOAK_ISSUER: ${BOOKING_SERVICE_KEYCLOAK_ISSUER:-https://keycloak.voyagevibes.in:8091/realms/flight-booking}
       KEYCLOAK_JWKS_URI: ${BOOKING_SERVICE_KEYCLOAK_JWKS_URI:-https://keycloak:8091/realms/flight-booking/protocol/openid-connect/certs}
+      KEYCLOAK_TOKEN_URL: ${BOOKING_SERVICE_KEYCLOAK_TOKEN_URL:-https://keycloak:8091/realms/flight-booking/protocol/openid-connect/token}
+      KEYCLOAK_SERVICE_CLIENT_ID: ${BOOKING_SERVICE_KEYCLOAK_CLIENT_ID:-flight-auth-admin}
+      KEYCLOAK_SERVICE_CLIENT_SECRET: ${BOOKING_SERVICE_KEYCLOAK_CLIENT_SECRET:-CorpWebSecret123$$}
     depends_on:
       booking-mongodb:
         condition: service_healthy

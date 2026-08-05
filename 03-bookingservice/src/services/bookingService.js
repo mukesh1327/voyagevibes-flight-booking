@@ -5,6 +5,11 @@ import { toDto } from './bookingMapper.js';
 import { refundPayment } from './paymentClient.js';
 import { normalizePassengers, validateBooking } from './bookingValidation.js';
 
+// payment-service confirms/fails a booking's payment outcome server-to-server, authenticated as
+// a service account whose token subject is not the booking's owner - it needs to reach any
+// booking by id, not just ones owned by that subject.
+const TRUSTED_SERVICE_ROLES = new Set(['platform-admin']);
+
 export async function createBooking({ body, userId }) {
   const validationError = validateBooking(body);
   if (validationError) {
@@ -64,8 +69,9 @@ export async function searchBookingsForSupport({ bookingId, email }) {
   return bookings.map(toDto);
 }
 
-export async function updateBookingStatus({ id, userId, status, paymentId }) {
-  const booking = await Booking.findOne({ _id: id, userId });
+export async function updateBookingStatus({ id, userId, roles, status, paymentId }) {
+  const isTrustedService = [...(roles || [])].some((role) => TRUSTED_SERVICE_ROLES.has(role));
+  const booking = await Booking.findOne(isTrustedService ? { _id: id } : { _id: id, userId });
   if (!booking) {
     return null;
   }

@@ -49,6 +49,7 @@ bookingRoutes.patch('/bookings/:id/status', requireUser, asyncRoute(async (reque
   const booking = await updateBookingStatus({
     id: request.params.id,
     userId: request.userId,
+    roles: request.userRoles,
     status: request.body.status,
     paymentId: request.body.paymentId,
   });
