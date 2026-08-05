@@ -28,6 +28,8 @@ services:
     environment:
       ASPNETCORE_URLS: http://+:8083
       ConnectionStrings__FlightDb: ${FLIGHT_DB_URL:-Server=flight-mssql,1433;Database=flightdb;User Id=sa;Password=FlightPass123!;TrustServerCertificate=True}
+      Keycloak__MetadataAddress: ${FLIGHT_SERVICE_KEYCLOAK_METADATA_ADDRESS:-https://keycloak:8091/realms/flight-booking/.well-known/openid-configuration}
+      Keycloak__Issuer: ${FLIGHT_SERVICE_KEYCLOAK_ISSUER:-https://keycloak.voyagevibes.in:8091/realms/flight-booking}
     depends_on:
       flight-mssql:
         condition: service_healthy

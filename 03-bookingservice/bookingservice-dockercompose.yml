@@ -27,6 +27,9 @@ services:
       PORT: 8084
       MONGODB_URI: ${BOOKING_MONGODB_URI:-mongodb://booking-mongodb:27017/bookingdb}
       FLIGHT_SERVICE_URL: ${FLIGHT_SERVICE_URL:-http://flight-service:8083}
+      PAYMENT_SERVICE_URL: ${PAYMENT_SERVICE_URL:-http://payment-service:8085}
+      KEYCLOAK_ISSUER: ${BOOKING_SERVICE_KEYCLOAK_ISSUER:-https://keycloak.voyagevibes.in:8091/realms/flight-booking}
+      KEYCLOAK_JWKS_URI: ${BOOKING_SERVICE_KEYCLOAK_JWKS_URI:-https://keycloak:8091/realms/flight-booking/protocol/openid-connect/certs}
     depends_on:
       booking-mongodb:
         condition: service_healthy

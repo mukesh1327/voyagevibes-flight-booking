@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { parseRoles } from '../src/middleware/auth.js';
+import { parseRealmRoles } from '../src/middleware/auth.js';
 import { allowedTransitions, validateBooking } from '../src/server.js';
 
 test('booking validation accepts a minimal booking', () => {
@@ -33,11 +33,16 @@ test('booking status transitions are explicit and bounded', () => {
   assert.equal(allowedTransitions.get('CONFIRMED'), undefined);
 });
 
-test('corporate role header parsing is case-insensitive and trimmed', () => {
-  const roles = parseRoles(' support-desk, FINANCE-OPS ,, platform-admin ');
+test('realm role extraction from a decoded token is case-insensitive', () => {
+  const roles = parseRealmRoles({ realm_access: { roles: ['support-desk', 'FINANCE-OPS', 'platform-admin'] } });
 
   assert.equal(roles.has('support-desk'), true);
   assert.equal(roles.has('finance-ops'), true);
   assert.equal(roles.has('platform-admin'), true);
-  assert.equal(roles.has(''), false);
+  assert.equal(roles.size, 3);
+});
+
+test('realm role extraction handles a token with no realm_access claim', () => {
+  const roles = parseRealmRoles({});
+  assert.equal(roles.size, 0);
 });

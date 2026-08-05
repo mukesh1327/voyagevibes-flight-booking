@@ -20,6 +20,15 @@ def create_razorpay_order(booking_id: str, amount_paise: int, currency: str) -> 
     return order["id"]
 
 
+def create_razorpay_refund(payment_id: str, amount_paise: int) -> str:
+    if not settings.razorpay_key_id or not settings.razorpay_key_secret:
+        return f"rfnd_mock_{uuid4().hex[:12]}"
+
+    client = razorpay.Client(auth=(settings.razorpay_key_id, settings.razorpay_key_secret))
+    refund = client.payment.refund(payment_id, {"amount": amount_paise})
+    return refund["id"]
+
+
 def verify_razorpay_signature(order_id: str, payment_id: str, signature: str, secret: str) -> bool:
     if not secret:
         return hmac.compare_digest(signature, "mock_signature")

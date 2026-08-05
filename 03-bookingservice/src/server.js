@@ -2,6 +2,7 @@ import cors from 'cors';
 import express from 'express';
 import mongoose from 'mongoose';
 import { config } from './config/index.js';
+import { startReconciliationJob } from './jobs/bookingReconciliation.js';
 import { allowedTransitions } from './models/bookingStatus.js';
 import { bookingRoutes } from './routes/bookingRoutes.js';
 import { validateBooking } from './services/bookingValidation.js';
@@ -30,6 +31,7 @@ app.use((error, _request, response, _next) => {
 
 async function start() {
   await mongoose.connect(config.mongoUri);
+  startReconciliationJob();
   app.listen(config.port, () => {
     console.log(`booking-service listening on ${config.port}`);
   });

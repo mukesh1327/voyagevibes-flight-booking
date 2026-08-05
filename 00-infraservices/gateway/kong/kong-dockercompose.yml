@@ -54,7 +54,7 @@ services:
       - ./.env
     ports:
       - "8000:8000"  # Proxy (your services entrypoint)
-      - "8443:8443"  # HTTPS
+      - "8444:8443"  # HTTPS (remapped from 8443 to avoid host port conflict)
       - "8001:8001"  # Admin API
     volumes:
       - ./ssl-certs:/etc/kong/certs:ro,Z

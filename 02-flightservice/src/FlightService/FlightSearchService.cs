@@ -54,15 +54,105 @@ public sealed class FlightSearchService(FlightDbContext db)
 
         var flight = await db.Flights.AsNoTracking().FirstAsync(flight => flight.Id == flightId, cancellationToken);
 
-        // This is a lightweight local hold like a travel checkout timer: inventory is reserved before payment.
+        // The hold is persisted so an unconfirmed checkout can be reclaimed later by HoldSweepService
+        // instead of leaking the decremented seats forever.
+        var now = DateTimeOffset.UtcNow;
+        var hold = new FlightHold
+        {
+            Id = Guid.NewGuid(),
+            FlightId = flight.Id,
+            SeatsHeld = seats,
+            Status = HoldStatus.Active,
+            CreatedAt = now,
+            ExpiresAt = now.Add(HoldWindow),
+        };
+        db.Holds.Add(hold);
+        await db.SaveChangesAsync(cancellationToken);
+
         return new FlightHoldResponse(
-            Guid.NewGuid().ToString("N"),
+            hold.Id.ToString("N"),
             flight.Id,
             flight.FlightNo,
             flight.Price,
             seats,
             flight.SeatsAvailable,
-            DateTimeOffset.UtcNow.Add(HoldWindow));
+            hold.ExpiresAt);
+    }
+
+    public async Task<HoldTransitionResult> ConfirmHoldAsync(Guid holdId, CancellationToken cancellationToken)
+    {
+        var claimed = await db.Holds
+            .Where(hold => hold.Id == holdId && hold.Status == HoldStatus.Active)
+            .ExecuteUpdateAsync(updates => updates.SetProperty(hold => hold.Status, HoldStatus.Confirmed), cancellationToken);
+
+        if (claimed == 1)
+        {
+            return HoldTransitionResult.Applied;
+        }
+
+        var hold = await db.Holds.AsNoTracking().FirstOrDefaultAsync(item => item.Id == holdId, cancellationToken);
+        if (hold is null)
+        {
+            return HoldTransitionResult.NotFound;
+        }
+
+        return hold.Status == HoldStatus.Confirmed ? HoldTransitionResult.AlreadyInState : HoldTransitionResult.Conflict;
+    }
+
+    public async Task<HoldTransitionResult> ReleaseHoldAsync(Guid holdId, CancellationToken cancellationToken)
+    {
+        // Claim the transition atomically first so a concurrent release (from the sweep and an
+        // explicit call racing each other) can never credit the seats back twice.
+        var claimed = await db.Holds
+            .Where(hold => hold.Id == holdId && hold.Status == HoldStatus.Active)
+            .ExecuteUpdateAsync(updates => updates.SetProperty(hold => hold.Status, HoldStatus.Released), cancellationToken);
+
+        if (claimed == 1)
+        {
+            var hold = await db.Holds.AsNoTracking().FirstAsync(item => item.Id == holdId, cancellationToken);
+            await db.Flights
+                .Where(flight => flight.Id == hold.FlightId)
+                .ExecuteUpdateAsync(updates => updates
+                    .SetProperty(flight => flight.SeatsAvailable, flight => flight.SeatsAvailable + hold.SeatsHeld), cancellationToken);
+            return HoldTransitionResult.Applied;
+        }
+
+        var existing = await db.Holds.AsNoTracking().FirstOrDefaultAsync(item => item.Id == holdId, cancellationToken);
+        if (existing is null)
+        {
+            return HoldTransitionResult.NotFound;
+        }
+
+        return existing.Status == HoldStatus.Released ? HoldTransitionResult.AlreadyInState : HoldTransitionResult.Conflict;
+    }
+
+    /// <summary>
+    /// Explicit user-initiated cancellation. Unlike ReleaseHoldAsync, this is allowed from
+    /// CONFIRMED too, since cancelling a paid booking is expected to give the seats back.
+    /// </summary>
+    public async Task<HoldTransitionResult> CancelHoldAsync(Guid holdId, CancellationToken cancellationToken)
+    {
+        var claimed = await db.Holds
+            .Where(hold => hold.Id == holdId && (hold.Status == HoldStatus.Active || hold.Status == HoldStatus.Confirmed))
+            .ExecuteUpdateAsync(updates => updates.SetProperty(hold => hold.Status, HoldStatus.Cancelled), cancellationToken);
+
+        if (claimed == 1)
+        {
+            var hold = await db.Holds.AsNoTracking().FirstAsync(item => item.Id == holdId, cancellationToken);
+            await db.Flights
+                .Where(flight => flight.Id == hold.FlightId)
+                .ExecuteUpdateAsync(updates => updates
+                    .SetProperty(flight => flight.SeatsAvailable, flight => flight.SeatsAvailable + hold.SeatsHeld), cancellationToken);
+            return HoldTransitionResult.Applied;
+        }
+
+        var existing2 = await db.Holds.AsNoTracking().FirstOrDefaultAsync(item => item.Id == holdId, cancellationToken);
+        if (existing2 is null)
+        {
+            return HoldTransitionResult.NotFound;
+        }
+
+        return existing2.Status == HoldStatus.Cancelled ? HoldTransitionResult.AlreadyInState : HoldTransitionResult.Conflict;
     }
 
     public static bool IsValidAirportCode(string value) =>

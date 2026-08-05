@@ -24,27 +24,42 @@ const readJson = async (response) => {
   return body;
 };
 
-export const searchFlights = async ({ from, to, date }) => {
-  const params = new URLSearchParams({ from, to, date, sort: 'price' });
+export const searchFlights = async ({ from, to, date, sort = 'price' }) => {
+  const params = new URLSearchParams({ from, to, date, sort });
   const response = await fetch(`/api/v1/flights/search?${params.toString()}`);
   return readJson(response);
 };
 
-export const createBooking = async ({ flight, passenger, user }) => {
-  const normalizedPassenger = {
+export const createBooking = async ({ flight, passengers, user }) => {
+  const normalizedPassengers = passengers.map((passenger) => ({
     name: passenger.name.trim(),
     email: passenger.email.trim().toLowerCase(),
     age: Number(passenger.age),
-  };
+  }));
 
   const response = await fetch('/api/v1/bookings', {
     method: 'POST',
     headers: jsonHeaders(user),
     body: JSON.stringify({
       flightId: flight.id,
-      amount: Number(flight.price),
-      passengers: [normalizedPassenger],
+      amount: Number(flight.price) * normalizedPassengers.length,
+      passengers: normalizedPassengers,
     }),
+  });
+  return readJson(response);
+};
+
+export const listBookings = async ({ user }) => {
+  const response = await fetch('/api/v1/bookings', {
+    headers: jsonHeaders(user),
+  });
+  return readJson(response);
+};
+
+export const cancelBooking = async ({ bookingId, user }) => {
+  const response = await fetch(`/api/v1/bookings/${bookingId}/cancel`, {
+    method: 'POST',
+    headers: jsonHeaders(user),
   });
   return readJson(response);
 };

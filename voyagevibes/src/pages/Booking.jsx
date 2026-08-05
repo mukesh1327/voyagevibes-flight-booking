@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
-import { Calendar, CheckCircle2, CreditCard, MapPin, Plane, Search } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Calendar, CheckCircle2, CreditCard, ListChecks, MapPin, Plane, Plus, Search, X } from 'lucide-react';
 import {
   createBooking,
   createPaymentOrder,
@@ -9,6 +10,8 @@ import {
   sendConfirmation,
   verifyPayment,
 } from '../services/bookingApi';
+
+const MAX_PASSENGERS = 6;
 
 const tomorrow = () => {
   const date = new Date();
@@ -24,14 +27,13 @@ const isPassengerValid = (passenger) => (
   Number(passenger.age) >= 1 &&
   Number(passenger.age) <= 120
 );
+const emptyPassenger = () => ({ name: '', email: '', age: 30 });
 
 const Booking = ({ user }) => {
-  const [search, setSearch] = useState({ from: 'DEL', to: 'BOM', date: tomorrow() });
-  const [passenger, setPassenger] = useState({
-    name: user?.name || '',
-    email: user?.email || '',
-    age: 30,
-  });
+  const [search, setSearch] = useState({ from: 'DEL', to: 'BOM', date: tomorrow(), sort: 'price' });
+  const [passengers, setPassengers] = useState([
+    { name: user?.name || '', email: user?.email || '', age: 30 },
+  ]);
   const [flights, setFlights] = useState([]);
   const [selectedFlight, setSelectedFlight] = useState(null);
   const [checkout, setCheckout] = useState(null);
@@ -40,7 +42,28 @@ const Booking = ({ user }) => {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
 
-  const canBook = useMemo(() => Boolean(selectedFlight) && isPassengerValid(passenger), [selectedFlight, passenger]);
+  const maxSeatsForFlight = selectedFlight ? Math.min(MAX_PASSENGERS, selectedFlight.seatsAvailable) : MAX_PASSENGERS;
+  const canBook = useMemo(
+    () => Boolean(selectedFlight) && passengers.length > 0 && passengers.every(isPassengerValid),
+    [selectedFlight, passengers],
+  );
+
+  const updatePassenger = (index, field, value) => {
+    setPassengers((current) => current.map((item, itemIndex) => (
+      itemIndex === index ? { ...item, [field]: value } : item
+    )));
+  };
+
+  const addPassenger = () => {
+    if (passengers.length >= maxSeatsForFlight) {
+      return;
+    }
+    setPassengers((current) => [...current, emptyPassenger()]);
+  };
+
+  const removePassenger = (index) => {
+    setPassengers((current) => (current.length > 1 ? current.filter((_, itemIndex) => itemIndex !== index) : current));
+  };
 
   const handleSearch = async () => {
     if (!isAirportCode(search.from) || !isAirportCode(search.to)) {
@@ -84,7 +107,7 @@ const Booking = ({ user }) => {
 
     try {
       // Browser calls stay on the gateway path; each backend owns one step of the booking workflow.
-      const booking = await createBooking({ flight: selectedFlight, passenger, user });
+      const booking = await createBooking({ flight: selectedFlight, passengers, user });
       setProgress((steps) => [...steps, 'Creating payment order']);
       const order = await createPaymentOrder({ booking });
       setCheckout({ booking, order });
@@ -105,15 +128,18 @@ const Booking = ({ user }) => {
     setLoading(true);
     setMessage('');
 
+    // The first passenger is the booking's primary contact for payment prefill and confirmation.
+    const primaryPassenger = passengers[0];
+
     try {
       setProgress((steps) => [...steps, 'Verifying payment']);
-      const paymentResult = await collectPaymentResult({ order: checkout.order, booking: checkout.booking, passenger });
+      const paymentResult = await collectPaymentResult({ order: checkout.order, booking: checkout.booking, passenger: primaryPassenger });
       const payment = await verifyPayment({ booking: checkout.booking, order: checkout.order, paymentResult });
       setProgress((steps) => [...steps, 'Confirming booking']);
       const confirmedBooking = await markBookingConfirmed({ booking: checkout.booking, payment, user });
       const latestBooking = await getBooking({ booking: confirmedBooking, user });
       setProgress((steps) => [...steps, 'Sending confirmation']);
-      const notification = await sendConfirmation({ booking: confirmedBooking, passenger });
+      const notification = await sendConfirmation({ booking: confirmedBooking, passenger: primaryPassenger });
 
       setConfirmation({ booking: latestBooking, payment, notification });
       setCheckout(null);
@@ -128,7 +154,14 @@ const Booking = ({ user }) => {
   return (
     <div className="main-content">
       <div className="glass-card glass-card-large" style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-        <div style={{ textAlign: 'center' }}>
+        <div style={{ textAlign: 'center', position: 'relative' }}>
+          <Link
+            to="/trips"
+            className="btn btn-outline"
+            style={{ position: 'absolute', right: 0, top: 0, padding: '0.5rem 1rem', fontSize: '0.875rem' }}
+          >
+            <ListChecks size={16} /> My Trips
+          </Link>
           <h2>Flight Search & Booking</h2>
           <p style={{ color: 'var(--text-secondary)' }}>Welcome back, {user?.name || 'Traveler'}! Search, book, and confirm in one simple flow.</p>
         </div>
@@ -155,6 +188,17 @@ const Booking = ({ user }) => {
                 Departure Date
               </label>
               <input value={search.date} onChange={(event) => setSearch({ ...search, date: event.target.value })} type="date" className="input-field" />
+            </div>
+            <div className="input-group" style={{ flex: '1 1 160px', marginBottom: 0 }}>
+              <label className="input-label">Sort by</label>
+              <select
+                value={search.sort}
+                onChange={(event) => setSearch({ ...search, sort: event.target.value })}
+                className="input-field"
+              >
+                <option value="price">Price (lowest first)</option>
+                <option value="departure">Departure time</option>
+              </select>
             </div>
           </div>
 
@@ -201,15 +245,84 @@ const Booking = ({ user }) => {
         {selectedFlight && (
           <section style={{ background: 'var(--surface)', padding: '1.5rem', borderRadius: '1rem', border: '1px solid var(--surface-border)' }}>
             <h3 style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <CreditCard size={20} color="var(--primary)" /> Passenger & Payment
+              <CreditCard size={20} color="var(--primary)" /> Passengers & Payment
             </h3>
-            <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-              <input className="input-field" style={{ flex: '1 1 220px' }} value={passenger.name} onChange={(event) => setPassenger({ ...passenger, name: event.target.value })} placeholder="Passenger name" />
-              <input className="input-field" style={{ flex: '1 1 220px' }} value={passenger.email} onChange={(event) => setPassenger({ ...passenger, email: event.target.value })} placeholder="Email" />
-              <input className="input-field" style={{ flex: '1 1 100px' }} value={passenger.age} onChange={(event) => setPassenger({ ...passenger, age: Number(event.target.value) })} type="number" min="1" placeholder="Age" />
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              {passengers.map((item, index) => (
+                <div
+                  key={index}
+                  style={{
+                    display: 'flex',
+                    gap: '0.75rem',
+                    flexWrap: 'wrap',
+                    alignItems: 'center',
+                    background: 'rgba(15, 23, 42, 0.35)',
+                    border: '1px solid var(--surface-border)',
+                    borderRadius: '0.75rem',
+                    padding: '0.75rem',
+                  }}
+                >
+                  <span style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', flex: '0 0 68px' }}>
+                    Passenger {index + 1}
+                  </span>
+                  <input
+                    className="input-field"
+                    style={{ flex: '1 1 200px' }}
+                    value={item.name}
+                    onChange={(event) => updatePassenger(index, 'name', event.target.value)}
+                    placeholder="Passenger name"
+                  />
+                  <input
+                    className="input-field"
+                    style={{ flex: '1 1 200px' }}
+                    value={item.email}
+                    onChange={(event) => updatePassenger(index, 'email', event.target.value)}
+                    placeholder="Email"
+                  />
+                  <input
+                    className="input-field"
+                    style={{ flex: '1 1 90px' }}
+                    value={item.age}
+                    onChange={(event) => updatePassenger(index, 'age', Number(event.target.value))}
+                    type="number"
+                    min="1"
+                    placeholder="Age"
+                  />
+                  {passengers.length > 1 && (
+                    <button
+                      type="button"
+                      className="btn btn-outline"
+                      style={{ padding: '0.5rem', flex: '0 0 auto' }}
+                      onClick={() => removePassenger(index)}
+                      aria-label={`Remove passenger ${index + 1}`}
+                    >
+                      <X size={16} />
+                    </button>
+                  )}
+                </div>
+              ))}
             </div>
-            <button className="btn btn-primary" style={{ width: '100%', justifyContent: 'center', marginTop: '1rem' }} onClick={handleCheckout} disabled={loading || Boolean(checkout)}>
-              <CheckCircle2 size={18} /> Hold Seat & Checkout
+
+            <button
+              type="button"
+              className="btn btn-outline"
+              style={{ marginTop: '0.75rem' }}
+              onClick={addPassenger}
+              disabled={passengers.length >= maxSeatsForFlight}
+            >
+              <Plus size={16} /> Add passenger
+            </button>
+            {passengers.length >= maxSeatsForFlight && (
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', marginTop: '0.35rem' }}>
+                {selectedFlight.seatsAvailable < MAX_PASSENGERS
+                  ? `Only ${selectedFlight.seatsAvailable} seat(s) left on this flight.`
+                  : `A booking can include up to ${MAX_PASSENGERS} passengers.`}
+              </p>
+            )}
+
+            <button className="btn btn-primary" style={{ width: '100%', justifyContent: 'center', marginTop: '1rem' }} onClick={handleCheckout} disabled={loading || Boolean(checkout) || !canBook}>
+              <CheckCircle2 size={18} /> Hold {passengers.length > 1 ? `${passengers.length} Seats` : 'Seat'} & Checkout
             </button>
             {progress.length > 0 && (
               <div style={{ marginTop: '1rem', color: 'var(--text-secondary)', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>

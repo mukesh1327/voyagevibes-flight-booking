@@ -17,3 +17,26 @@ export const holdFlightInventory = async ({ flightId, seats }) => {
 
   return body;
 };
+
+// Best-effort sync with flight-service's hold: the hold sweep is the backstop if this call
+// fails or the process crashes before it runs, so callers should not treat failures as fatal.
+export const confirmFlightHold = async (holdId) => {
+  const response = await fetch(`${config.flightServiceUrl}/flights/holds/${holdId}/confirm`, {
+    method: 'POST',
+  });
+  return response.ok;
+};
+
+export const releaseFlightHold = async (holdId) => {
+  const response = await fetch(`${config.flightServiceUrl}/flights/holds/${holdId}/release`, {
+    method: 'POST',
+  });
+  return response.ok;
+};
+
+export const cancelFlightHold = async (holdId) => {
+  const response = await fetch(`${config.flightServiceUrl}/flights/holds/${holdId}/cancel`, {
+    method: 'POST',
+  });
+  return response.ok;
+};

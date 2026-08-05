@@ -1,3 +1,5 @@
+using System.Security.Claims;
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 
 namespace FlightService.Endpoints;
@@ -35,11 +37,11 @@ public static class FlightEndpoints
         app.MapPatch("/flights/{id:guid}", async (
             Guid id,
             FlightUpdateRequest request,
-            HttpRequest httpRequest,
+            ClaimsPrincipal user,
             FlightDbContext db,
             CancellationToken cancellationToken) =>
         {
-            if (!HasAnyRole(httpRequest, "flight-admin", "platform-admin", "super-admin"))
+            if (!HasAnyRole(user, "flight-admin", "platform-admin", "super-admin"))
             {
                 return Results.Json(new { message = "flight-admin role is required" }, statusCode: StatusCodes.Status403Forbidden);
             }
@@ -59,7 +61,7 @@ public static class FlightEndpoints
             request.ApplyTo(flight);
             await db.SaveChangesAsync(cancellationToken);
             return Results.Ok(FlightDto.From(flight));
-        });
+        }).RequireAuthorization();
 
         app.MapPost("/flights/{id:guid}/hold", async (
             Guid id,
@@ -78,14 +80,62 @@ public static class FlightEndpoints
                 : Results.Ok(hold);
         });
 
+        app.MapPost("/flights/holds/{holdId:guid}/confirm", async (
+            Guid holdId,
+            FlightSearchService service,
+            CancellationToken cancellationToken) =>
+        {
+            var result = await service.ConfirmHoldAsync(holdId, cancellationToken);
+            return MapHoldTransitionResult(result, holdId, "CONFIRMED", "Hold was already released and cannot be confirmed");
+        });
+
+        app.MapPost("/flights/holds/{holdId:guid}/release", async (
+            Guid holdId,
+            FlightSearchService service,
+            CancellationToken cancellationToken) =>
+        {
+            var result = await service.ReleaseHoldAsync(holdId, cancellationToken);
+            return MapHoldTransitionResult(result, holdId, "RELEASED", "Hold was already confirmed and cannot be released");
+        });
+
+        app.MapPost("/flights/holds/{holdId:guid}/cancel", async (
+            Guid holdId,
+            FlightSearchService service,
+            CancellationToken cancellationToken) =>
+        {
+            var result = await service.CancelHoldAsync(holdId, cancellationToken);
+            return MapHoldTransitionResult(result, holdId, "CANCELLED", "Hold was already released and cannot be cancelled");
+        });
+
         return app;
     }
 
-    private static bool HasAnyRole(HttpRequest request, params string[] allowedRoles)
+    private static IResult MapHoldTransitionResult(HoldTransitionResult result, Guid holdId, string appliedStatus, string conflictMessage) => result switch
     {
-        var roles = request.Headers["x-user-roles"]
-            .SelectMany(value => value?.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries) ?? [])
-            .Select(role => role.ToLowerInvariant())
+        HoldTransitionResult.Applied or HoldTransitionResult.AlreadyInState => Results.Ok(new { holdId, status = appliedStatus }),
+        HoldTransitionResult.NotFound => Results.NotFound(new { message = "Hold not found" }),
+        _ => Results.Conflict(new { message = conflictMessage }),
+    };
+
+    private static bool HasAnyRole(ClaimsPrincipal user, params string[] allowedRoles)
+    {
+        // Keycloak puts realm roles in a "realm_access": {"roles": [...]} claim, not the
+        // individual role claims ASP.NET's JWT bearer handler recognizes out of the box.
+        var realmAccessClaim = user.FindFirst("realm_access")?.Value;
+        if (string.IsNullOrEmpty(realmAccessClaim))
+        {
+            return false;
+        }
+
+        using var document = JsonDocument.Parse(realmAccessClaim);
+        if (!document.RootElement.TryGetProperty("roles", out var rolesElement))
+        {
+            return false;
+        }
+
+        var roles = rolesElement.EnumerateArray()
+            .Select(role => role.GetString()?.ToLowerInvariant())
+            .Where(role => role is not null)
             .ToHashSet();
 
         return allowedRoles.Any(role => roles.Contains(role));

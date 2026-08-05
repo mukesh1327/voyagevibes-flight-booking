@@ -49,3 +49,14 @@ class PaymentLookupResponse(BaseModel):
     status: str
     created_at: str
     events: list[PaymentEventResponse]
+
+
+class RefundRequest(BaseModel):
+    booking_id: str = Field(min_length=1)
+
+
+class RefundResponse(BaseModel):
+    booking_id: str
+    razorpay_order_id: str
+    refund_id: str
+    status: str

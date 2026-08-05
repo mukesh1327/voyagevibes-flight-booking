@@ -2,8 +2,10 @@ import { Router } from 'express';
 import { requireAnyRole, requireUser } from '../middleware/auth.js';
 import { asyncRoute } from '../middleware/asyncRoute.js';
 import {
+  cancelBooking,
   createBooking,
   getBooking,
+  listBookingsForUser,
   searchBookingsForSupport,
   updateBookingStatus,
 } from '../services/bookingService.js';
@@ -13,6 +15,11 @@ export const bookingRoutes = Router();
 bookingRoutes.post('/bookings', requireUser, asyncRoute(async (request, response) => {
   const booking = await createBooking({ body: request.body, userId: request.userId });
   response.status(201).json(booking);
+}));
+
+bookingRoutes.get('/bookings', requireUser, asyncRoute(async (request, response) => {
+  const bookings = await listBookingsForUser({ userId: request.userId });
+  response.json({ items: bookings });
 }));
 
 bookingRoutes.get(
@@ -45,6 +52,16 @@ bookingRoutes.patch('/bookings/:id/status', requireUser, asyncRoute(async (reque
     status: request.body.status,
     paymentId: request.body.paymentId,
   });
+
+  if (!booking) {
+    response.status(404).json({ message: 'Booking not found' });
+    return;
+  }
+  response.json(booking);
+}));
+
+bookingRoutes.post('/bookings/:id/cancel', requireUser, asyncRoute(async (request, response) => {
+  const booking = await cancelBooking({ id: request.params.id, userId: request.userId });
 
   if (!booking) {
     response.status(404).json({ message: 'Booking not found' });

@@ -29,6 +29,9 @@ services:
       DATABASE_URL: ${PAYMENT_DATABASE_URL:-postgresql+psycopg://paymentservice:paymentservice@platform-postgres:5432/paymentdb}
       RAZORPAY_KEY_ID: ${RAZORPAY_KEY_ID:-}
       RAZORPAY_KEY_SECRET: ${RAZORPAY_KEY_SECRET:-}
+      BOOKING_SERVICE_URL: ${BOOKING_SERVICE_URL:-http://booking-service:8084}
+      KEYCLOAK_ISSUER: ${PAYMENT_SERVICE_KEYCLOAK_ISSUER:-https://keycloak.voyagevibes.in:8091/realms/flight-booking}
+      KEYCLOAK_JWKS_URI: ${PAYMENT_SERVICE_KEYCLOAK_JWKS_URI:-https://keycloak:8091/realms/flight-booking/protocol/openid-connect/certs}
     depends_on:
       platform-postgres:
         condition: service_healthy

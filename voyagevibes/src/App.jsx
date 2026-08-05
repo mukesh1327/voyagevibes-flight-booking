@@ -7,6 +7,7 @@ import Callback from './pages/Callback';
 import CorporateDashboard from './pages/CorporateDashboard';
 import CustomerDashboard from './pages/CustomerDashboard';
 import Login from './pages/Login';
+import MyTrips from './pages/MyTrips';
 import { clearStoredAuth, getCurrentUser, getStoredToken } from './services/auth';
 import './App.css';
 
@@ -115,6 +116,15 @@ function App() {
             element={
               <ProtectedRoute user={user} allowedRoles={['customer']}>
                 <Booking user={user} />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/trips"
+            element={
+              <ProtectedRoute user={user} allowedRoles={['customer']}>
+                <MyTrips user={user} />
               </ProtectedRoute>
             }
           />

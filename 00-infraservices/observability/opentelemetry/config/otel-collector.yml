@@ -28,6 +28,15 @@ exporters:
       enabled: true
   otlp_http/loki:
     endpoint: http://loki:3100/otlp
+  # Dual-export to Makara's telemetry-platform ingestion gateway, additive
+  # alongside the existing Tempo/Loki/Prometheus pipeline above -- this app's
+  # own observability stack is unchanged and remains the source of truth for
+  # its own dashboards. See makara-telemetry-platform/ and
+  # references/docs/architecture/telemetry-platform-design.md (TEL-002).
+  otlp_http/makara:
+    endpoint: http://otel-gateway:4318
+    headers:
+      Authorization: Bearer ${env:MAKARA_INGEST_TOKEN}
 
 service:
   extensions:
@@ -41,6 +50,7 @@ service:
         - batch
       exporters:
         - otlp_http/tempo
+        - otlp_http/makara
     metrics:
       receivers:
         - otlp
@@ -49,6 +59,7 @@ service:
         - batch
       exporters:
         - prometheus
+        - otlp_http/makara
     logs:
       receivers:
         - otlp
@@ -57,3 +68,4 @@ service:
         - batch
       exporters:
         - otlp_http/loki
+        - otlp_http/makara

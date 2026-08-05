@@ -217,13 +217,15 @@ services:
     restart: unless-stopped
     command:
       - --config=/etc/otelcol-contrib/config.yml
+    environment:
+      MAKARA_INGEST_TOKEN: ${MAKARA_INGEST_TOKEN:?Set MAKARA_INGEST_TOKEN in .env -- see makara-telemetry-platform/.makara/runtime-secrets/voyagevibes-ingest-token}
     volumes:
       - ./00-infraservices/observability/opentelemetry/config/otel-collector.yml:/etc/otelcol-contrib/config.yml:ro,Z
     ports:
       - "4317:4317"
       - "4318:4318"
       - "8889:8889"
-      - "13133:13133"
+      - "13143:13133"  # remapped from 13133 to avoid host port conflict
     depends_on:
       tempo:
         condition: service_started
@@ -243,7 +245,7 @@ services:
       - tempo_data:/tmp/tempo
     ports:
       - "3200:3200"
-      - "4320:4317"
+      - "4327:4317"  # remapped from 4320 to avoid host port conflict
       - "4321:4318"
     networks:
       - flight-booking-network
@@ -291,7 +293,7 @@ services:
       - ./00-infraservices/observability/grafana/provisioning:/etc/grafana/provisioning:ro,Z
       - ./00-infraservices/observability/grafana/dashboards:/var/lib/grafana/dashboards:ro,Z
     ports:
-      - "3000:3000"
+      - "3033:3000"  # remapped from 3000 to avoid host port conflict
     depends_on:
       - prometheus
       - loki
