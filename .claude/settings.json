@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -s \"http://localhost:3100/loki/api/v1/label/service_name/values\")",
+      "Bash(python3 -m json.tool)",
+      "Bash(curl -s \"http://localhost:3100/loki/api/v1/labels\")",
+      "Bash(curl -s \"http://localhost:8083/flights/health\")",
+      "Bash(curl -s \"http://localhost:8083/flights/search?from=DEL&to=BOM&date=2026-08-05&sort=price\")",
+      "Bash(curl -s \"http://localhost:3200/api/search?limit=10\")",
+      "Bash(python3 -c ' *)"
+    ]
+  }
+}

@@ -27,6 +27,8 @@ This is intentionally not a full airline system. Seat maps, PNR provider integra
 |-----------|----------|-----------|------------|
 | Keycloak  | Postgres | 8090      | 8091       |
 
+**Observability**: otel-collector → Tempo/Loki/Prometheus/Grafana. Run with `sh scripts/run-with-opentelemetry.sh up`. See [00-infraservices/observability/README.md](./00-infraservices/observability/README.md) for architecture, current telemetry status per signal, verification commands, and how to tell manual vs. auto-instrumented data apart.
+
 **Images used**
 - [Keycloak]()  
 registry.redhat.io/rhbk/keycloak-rhel9:26.2-15
