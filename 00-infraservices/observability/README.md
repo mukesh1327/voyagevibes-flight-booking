@@ -2,6 +2,10 @@
 
 VoyageVibes exists partly as example workload for OpenTelemetry demos, so this doc tracks what's actually flowing through the pipeline, not just what's configured.
 
+For a deep dive into the OTel data model itself (Resource/Span/Metric/Log schemas, semantic conventions) and exactly which parts of that schema this project's live telemetry actually exercises, see [telemetry-schema-analysis.md](./telemetry-schema-analysis.md).
+
+For a worked example of an actual request's trace tree across services, plus the exact query syntax to correlate its logs, see [trace-flow-walkthrough.md](./trace-flow-walkthrough.md).
+
 ## Architecture
 
 ```
@@ -18,15 +22,25 @@ VoyageVibes exists partly as example workload for OpenTelemetry demos, so this d
 
 Run the full stack (base + otel overlay): `sh scripts/run-with-opentelemetry.sh up`. Grafana at `http://localhost:3033` (remapped from 3000 to avoid a host conflict), Tempo API at `:3200`, Loki API at `:3100`, Prometheus at `:9091`.
 
-## Status as of 2026-08-06
+## Status as of 2026-08-10
 
 | Signal | Status | Detail |
 |---|---|---|
-| **Metrics** | Working, 4/5 services | auth, booking, flight, payment all export live, fresh metric sets (18–48 distinct series each — HTTP/DB durations, GC stats, runtime metrics). `notification-service` (eBPF) doesn't produce metrics — expected, eBPF instrumentation only captures HTTP-level trace data. |
-| **Traces** | Broken almost everywhere | Tempo has traces **only** from flight-service's internal 30s background job (the hold-expiry sweep querying the DB via EF Core/SqlClient instrumentation). Zero HTTP-request-triggered traces from **any** service, confirmed live by hitting fresh endpoints on all 5 services and re-querying — nothing new appears, despite the corresponding HTTP metrics existing with live timestamps. Root cause not yet identified — instrumentation is clearly firing (metrics prove it) but trace export isn't reaching Tempo. |
-| **Logs** | Broken almost everywhere | Loki only has `flight-service`, and even that is just the raw, uninterpolated EF Core log template (`"Executed DbCommand ({elapsed}ms)..."` — the `{elapsed}` placeholder literally unfilled) bridged automatically from ASP.NET Core's internal framework logging. Nothing from auth-service (Logback), booking-service (console.log/error), or payment-service (Python `logging`), despite all three genuinely producing log output to stdout. |
+| **Metrics** | Working, 4/5 services | auth, booking, flight, payment export live, fresh metric sets (18–48 distinct series each — HTTP/DB durations, GC stats, runtime metrics). `notification-service` doesn't produce metrics — its eBPF sidecar can't attach at all (see below). |
+| **Traces** | Working, 4/5 services | auth, booking, flight, payment all confirmed exporting to Tempo. `notification-service` absent (eBPF sidecar issue, see below). |
+| **Logs** | Working, 3/5 services | auth, flight, payment confirmed in Loki. `booking-service` absent — structural, not broken (see below). `notification-service` absent (eBPF). |
 
-**Net read:** the collector → backend plumbing is proven fine (metrics prove it end-to-end). The gap is specifically in how each language's SDK/agent is (or isn't) exporting traces and logs — worth a real root-cause pass rather than more guessing. This is the natural next step for the "Phase 3: telemetry richness" work (business-context span attributes, structured trace-correlated logging, fault-injection knobs, browser RUM — see the codebase-findings artifact from the earlier analysis session).
+### Root causes found (2026-08-10 investigation)
+
+**Traces/logs were stuck for auth/booking/payment despite metrics working fine.** Root cause: these services had been running for hours across multiple restarts of the observability backend (otel-collector/Tempo/Loki got restarted independently of the app containers during earlier work). Their OTLP exporters' long-lived connections went stale and didn't self-recover. **Fix: recreate the affected containers** (`podman compose ... up -d --no-deps --force-recreate <service>` — plain `up -d` won't do it if compose sees no config diff). Confirmed immediately after recreation: traces and logs started flowing on the next request.
+
+**Operational gotcha, worth remembering:** if you restart otel-collector/Tempo/Loki/Prometheus/Grafana without also restarting the 4 in-process-SDK-instrumented services (auth, booking, flight, payment), expect traces/logs to silently stop until those services are recreated too. Metrics are more resilient to this (periodic export re-attempts on a shorter cycle) which is why they kept working when traces/logs didn't — this asymmetry is what made the bug non-obvious.
+
+**`booking-service` missing from logs is structural, not a bug.** It uses plain `console.log`/`console.error`; Node's `@opentelemetry/auto-instrumentations-node/register` auto-instruments HTTP/Mongo/etc. but does **not** bridge `console.*` to OTel logs without an explicit transport (e.g. winston/pino + a log-bridge package). This is real missing coverage, fixable with a small code addition — candidate for the Phase 3 structured-logging work, not something to "just restart."
+
+**`notification-service` missing from all three signals is an environment constraint, not fixable in application code.** Its eBPF sidecar (`notification-go-auto`) loops forever with `failed to set memlock rlimit: operation not permitted` — rootless Podman doesn't grant the eBPF instrumentation the privilege it needs to allocate its maps, even with `privileged: true` set on the container. Same applies to `voyagevibes-ui-auto` (frontend eBPF sidecar), which has the same instability. Would need a different container runtime (rootful Docker, or a Kubernetes node with the right host config) to actually work.
+
+**`voyagevibes-ui-auto` is commented out in `docker-compose.otel.yml` as of 2026-08-11.** It was tight-looping every ~4s (3500+ restarts observed) on the exact same memlock error, and `restart: unless-stopped` meant it never gave up — pure overhead (CPU churn, log volume) on an already resource-constrained host, with zero chance of success given the rootless-Podman constraint above. Uncomment the service block if this ever runs on rootful Docker or a Kubernetes node capable of granting the eBPF privilege. `notification-go-auto` has the identical failure mode and was left running (not asked about) — same fix applies if it becomes a problem.
 
 ## How to check this yourself
 

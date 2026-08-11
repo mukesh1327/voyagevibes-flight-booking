@@ -188,28 +188,33 @@ services:
     networks:
       - flight-booking-network
 
-  voyagevibes-ui-auto:
-    image: docker.io/otel/ebpf-instrument:main
-    container_name: voyagevibes-ui-auto
-    restart: unless-stopped
-    privileged: true
-    pid: host
-    environment:
-      OTEL_EBPF_OPEN_PORT: "9001"
-      OTEL_SERVICE_NAME: voyagevibes-ui
-      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
-      OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
-      OTEL_PROPAGATORS: tracecontext,baggage
-    volumes:
-      - /sys/fs/cgroup:/sys/fs/cgroup
-      - /sys/kernel/security:/sys/kernel/security
-    depends_on:
-      voyagevibes-ui:
-        condition: service_started
-      otel-collector:
-        condition: service_started
-    networks:
-      - flight-booking-network
+  # voyagevibes-ui-auto: disabled 2026-08-11 -- crash-loops forever in rootless Podman
+  # ("failed to set memlock rlimit: operation not permitted", 3500+ restarts observed).
+  # eBPF instrumentation needs a privilege rootless Podman won't grant even with
+  # privileged: true. Needs rootful Docker or a Kubernetes node with the right host
+  # config to actually work -- see 00-infraservices/observability/README.md.
+  # voyagevibes-ui-auto:
+  #   image: docker.io/otel/ebpf-instrument:main
+  #   container_name: voyagevibes-ui-auto
+  #   restart: unless-stopped
+  #   privileged: true
+  #   pid: host
+  #   environment:
+  #     OTEL_EBPF_OPEN_PORT: "9001"
+  #     OTEL_SERVICE_NAME: voyagevibes-ui
+  #     OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+  #     OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
+  #     OTEL_PROPAGATORS: tracecontext,baggage
+  #   volumes:
+  #     - /sys/fs/cgroup:/sys/fs/cgroup
+  #     - /sys/kernel/security:/sys/kernel/security
+  #   depends_on:
+  #     voyagevibes-ui:
+  #       condition: service_started
+  #     otel-collector:
+  #       condition: service_started
+  #   networks:
+  #     - flight-booking-network
 
   otel-collector:
     image: docker.io/otel/opentelemetry-collector-contrib:0.157.0
