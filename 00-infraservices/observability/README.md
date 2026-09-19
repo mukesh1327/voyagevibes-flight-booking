@@ -12,7 +12,6 @@ For a worked example of an actual request's trace tree across services, plus the
 5 services + UI  --OTLP (grpc/http)-->  otel-collector  --+--> Tempo      (traces)
                                                             +--> Prometheus (metrics, via :8889 scrape)
                                                             +--> Loki       (logs, OTLP endpoint)
-                                                            +--> Makara telemetry-platform gateway (additive dual-export)
 ```
 
 - Collector config: `opentelemetry/config/otel-collector.yml`

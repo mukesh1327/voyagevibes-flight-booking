@@ -222,8 +222,6 @@ services:
     restart: unless-stopped
     command:
       - --config=/etc/otelcol-contrib/config.yml
-    environment:
-      MAKARA_INGEST_TOKEN: ${MAKARA_INGEST_TOKEN:?Set MAKARA_INGEST_TOKEN in .env -- see makara-telemetry-platform/.makara/runtime-secrets/voyagevibes-ingest-token}
     volumes:
       - ./00-infraservices/observability/opentelemetry/config/otel-collector.yml:/etc/otelcol-contrib/config.yml:ro,Z
     ports:
